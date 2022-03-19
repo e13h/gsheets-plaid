@@ -1,0 +1,3 @@
+[submodule "tiny-quickstart"]
+	path = tiny-quickstart
+	url = git@github.com:evanphilipsmith/tiny-quickstart.git
