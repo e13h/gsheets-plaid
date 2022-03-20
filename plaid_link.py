@@ -1,8 +1,8 @@
-from time import sleep
-import webbrowser
-import subprocess
-import shutil
 import shlex
+import shutil
+import subprocess
+import webbrowser
+from time import sleep
 
 
 def main():
