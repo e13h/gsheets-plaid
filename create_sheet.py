@@ -5,8 +5,9 @@ from google.auth.transport.requests import Request
 from google.oauth2.credentials import Credentials
 from google_auth_oauthlib.flow import InstalledAppFlow
 from googleapiclient.discovery import build
-from googleapiclient.errors import HttpError
+from dotenv import dotenv_values
 
+CONFIG = dotenv_values('.env')
 SCOPES = ['https://www.googleapis.com/auth/drive.file']
 
 def get_creds(scopes: list[str]) -> Credentials:
@@ -16,18 +17,18 @@ def get_creds(scopes: list[str]) -> Credentials:
     # The file token.json stores the user's access and refresh tokens, and is
     # created automatically when the authorization flow completes for the first
     # time.
-    if os.path.exists('token.json'):
-        creds = Credentials.from_authorized_user_file('token.json', scopes)
+    if os.path.exists(CONFIG.get('GOOGLE_TOKEN_FILENAME')):
+        creds = Credentials.from_authorized_user_file(CONFIG.get('GOOGLE_TOKEN_FILENAME'), scopes)
     # If there are no (valid) credentials available, let the user log in.
     if not creds or not creds.valid:
         if creds and creds.expired and creds.refresh_token:
             creds.refresh(Request())
         else:
             flow = InstalledAppFlow.from_client_secrets_file(
-                'credentials.json', SCOPES)
+                CONFIG.get('GOOGLE_CREDENTIAL_FILENAME'), SCOPES)
             creds = flow.run_local_server(port=0)
         # Save the credentials for the next run
-        with open('token.json', 'w') as token:
+        with open(CONFIG.get('GOOGLE_TOKEN_FILENAME'), 'w') as token:
             token.write(creds.to_json())
     return creds
 
@@ -36,9 +37,9 @@ def get_spreadsheet_id() -> str:
     """Get the spreadsheet ID, or create a new one
     """
     spreadsheet_id = None
-    if (os.path.exists('config.json')):
+    if (os.path.exists(CONFIG.get('GOOGLE_SHEETS_CONFIG_FILENAME'))):
         print('Found an existing spreadsheet...')
-        with open('config.json') as config_file:
+        with open(CONFIG.get('GOOGLE_SHEETS_CONFIG_FILENAME')) as config_file:
             config = json.load(config_file)
         spreadsheet_id = config.get("spreadsheetId")
     else:
@@ -48,7 +49,7 @@ def get_spreadsheet_id() -> str:
         service = build('sheets', 'v4', credentials=creds)
         result = service.spreadsheets().create(body=test_spreadsheet).execute()
         spreadsheet_id = result.get("spreadsheetId")
-        with open('config.json', 'w') as config_file:
+        with open(CONFIG.get('GOOGLE_SHEETS_CONFIG_FILENAME'), 'w') as config_file:
             json.dump({"spreadsheetId": spreadsheet_id}, config_file)
     return spreadsheet_id
 
