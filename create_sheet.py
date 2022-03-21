@@ -32,6 +32,8 @@ def get_creds(scopes: list[str]) -> Credentials:
             token.write(creds.to_json())
     return creds
 
+creds = get_creds(SCOPES)
+gsheets_service = build('sheets', 'v4', credentials=creds)
 
 def get_spreadsheet_id() -> str:
     """Get the spreadsheet ID, or create a new one
@@ -45,9 +47,7 @@ def get_spreadsheet_id() -> str:
     else:
         print('Creating a new spreadsheet...')
         test_spreadsheet = {'properties': {'title': 'Test Sheet'}}
-        creds = get_creds(SCOPES)
-        service = build('sheets', 'v4', credentials=creds)
-        result = service.spreadsheets().create(body=test_spreadsheet).execute()
+        result = gsheets_service.spreadsheets().create(body=test_spreadsheet).execute()
         spreadsheet_id = result.get("spreadsheetId")
         with open(CONFIG.get('GOOGLE_SHEETS_CONFIG_FILENAME'), 'w') as config_file:
             json.dump({"spreadsheetId": spreadsheet_id}, config_file)
