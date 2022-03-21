@@ -1,8 +1,13 @@
+import os
 import shlex
 import shutil
 import subprocess
 import webbrowser
 from time import sleep
+
+from dotenv import dotenv_values
+
+CONFIG = dotenv_values('.env')
 
 
 def main():
@@ -11,7 +16,9 @@ def main():
     # Start tiny-quickstart
     command = f'{shutil.which("npm")} start'
     print(shlex.split(command))
-    p = subprocess.Popen(shlex.split(command), cwd='./tiny-quickstart')
+    plaid_env = os.environ.copy()
+    plaid_env.update(CONFIG)
+    p = subprocess.Popen(shlex.split(command), cwd='./tiny-quickstart', env=plaid_env)
 
     sleep(1)
     # Direct the user to Plaid Link
