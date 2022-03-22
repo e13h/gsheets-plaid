@@ -2,6 +2,7 @@ import json
 from datetime import datetime, timedelta
 
 import pandas as pd
+import numpy as np
 import plaid
 from dotenv import dotenv_values
 from plaid.api import plaid_api
@@ -63,7 +64,7 @@ plaid_config = plaid.Configuration(
 api_client = plaid.ApiClient(plaid_config)
 client = plaid_api.PlaidApi(api_client)
 
-def get_transaction_data(access_token: str, num_days: int = 30):
+def get_transactions_from_plaid(access_token: str, num_days: int = 30) -> pd.DataFrame:
     """Get transaction data from Plaid for a given access token.
     """
     start_date = (datetime.now() - timedelta(days=num_days))
@@ -117,23 +118,77 @@ def get_transaction_data(access_token: str, num_days: int = 30):
         transactions['item_id'] = item.item_id
         transactions['institution_id'] = item.institution_id
 
-        transactions.set_index('transaction_id', drop=False, inplace=True)
-        headers = transactions.columns.tolist()
-        values = transactions.to_numpy().tolist()
-        values.insert(0, headers)
-        return values
+        # TODO set final column order (or insert the previous columns instead of appending)
+        return transactions
     except plaid.ApiException as e:
         print(e)
 
 
-def fill_gsheet(transactions: list[list]):
+def get_transactions_from_gsheet() -> pd.DataFrame:
+    """Get the transactions already saved to the Google Sheet.
+    """
+    result = gsheets_service.spreadsheets().values().get(
+        spreadsheetId=get_spreadsheet_id(),
+        range='A1:AB',
+    ).execute()
+    rows = result.get('values', [])
+    if not len(rows):
+        return []
+    transactions = pd.DataFrame(rows[1:], columns=rows[0])
+
+    # Turn pending into a boolean column
+    transactions['pending'] = transactions.pending.apply(lambda x: x.lower() == 'true')
+    return transactions
+
+
+def merge_transactions(existing_transactions: pd.DataFrame, new_transactions: pd.DataFrame) -> pd.DataFrame:
+    """Merge new transactions with existing transactions.
+    """
+    num_preexisting_rows = len(existing_transactions)
+    if not num_preexisting_rows:
+        return new_transactions
+
+    # Drop pending transactions that share the same item_id as new_transactions
+    current_item = existing_transactions.item_id.isin(new_transactions.item_id.unique())
+    existing_transactions = existing_transactions[~(current_item & existing_transactions.pending)]
+
+    # Drop new_transactions that are already found in existing_transactions
+    new_transaction_ids = new_transactions.transaction_id
+    existing_transaction_ids = existing_transactions.transaction_id
+    new_transactions = new_transactions[~new_transaction_ids.isin(existing_transaction_ids)]
+
+    # Concatenate new_transactions to existing_transactions
+    result = pd.concat((existing_transactions, new_transactions), axis=0)
+
+    # Sort
+    result.sort_values(
+        by=['pending', 'datetime', 'name'],
+        ascending=[True, False, True],
+        inplace=True,
+        ignore_index=True)
+
+    # Add (num_preexisting_rows - num_result_rows) blank rows to the result
+    num_blank_rows = num_preexisting_rows - len(result)
+    if num_blank_rows > 0:
+        blank_rows = pd.DataFrame([[np.nan] * len(result.columns)] * num_blank_rows, columns=result.columns)
+        result = pd.concat((result, blank_rows), axis=0)
+    
+    result.fillna('', inplace=True)
+    return result
+
+
+def fill_gsheet(transactions: pd.DataFrame):
     """Fill transaction data into Google Sheet.
     """
-    gsheets_service.spreadsheets().values().append(
+    # TODO set datetime column format
+    headers = transactions.columns.tolist()
+    values = transactions.to_numpy().tolist()
+    values.insert(0, headers)
+    gsheets_service.spreadsheets().values().update(
         spreadsheetId=get_spreadsheet_id(),
         range='A1:AB',
         valueInputOption='USER_ENTERED',
-        body={'values': transactions},
+        body={'values': values},
     ).execute()
 
 
@@ -148,9 +203,11 @@ def get_access_tokens() -> list[dict]:
 def main():
     """Put transaction data into Google Sheet.
     """
+    result = get_transactions_from_gsheet()
     for token in get_access_tokens():
-        fill_gsheet(get_transaction_data(token['access_token'], num_days=30))
-        break
+        new_transactions = get_transactions_from_plaid(token['access_token'], num_days=30)
+        result = merge_transactions(result, new_transactions)
+    fill_gsheet(result)
 
 if __name__ == '__main__':
     main()
