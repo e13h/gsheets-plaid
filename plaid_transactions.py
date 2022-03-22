@@ -96,7 +96,7 @@ def get_transactions_from_plaid(access_token: str, num_days: int = 30) -> pd.Dat
                 return row.datetime
             return datetime.combine(row.date, datetime.min.time())
         transactions['datetime'] = transactions.apply(fillna_datetime, axis=1)
-        transactions['datetime'] = transactions['datetime'].dt.strftime('%Y-%m-%d %H:%M:%S%Z')
+        transactions['datetime'] = transactions['datetime'].dt.strftime('%Y-%m-%d %H:%M:%S')
         transactions['date'] = transactions['date'].astype(str)
 
         # Expand categories
