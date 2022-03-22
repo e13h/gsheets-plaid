@@ -156,3 +156,6 @@ cython_debug/
 
 # Project tokens
 tokens/
+
+# macOS files
+.DS_Store
