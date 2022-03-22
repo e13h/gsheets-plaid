@@ -120,14 +120,15 @@ def get_transactions_from_plaid(access_token: str, num_days: int = 30) -> pd.Dat
 
         # Add account info
         accounts.set_index('account_id', inplace=True)
-        transactions['account_name'] = transactions.account_id.apply(lambda x: accounts.loc[x].get('name'))
+        account_name_idx = TRANSACTION_COLS.index('account_id') + 1
+        account_name = transactions.account_id.apply(lambda x: accounts.loc[x].get('name'))
+        transactions.insert(account_name_idx, 'account_name', account_name)
 
         # Add item info
-        transactions['item_id'] = item.item_id
-        transactions['institution_id'] = item.institution_id
-        transactions['institution_name'] = institution.get('name')
+        transactions.insert(account_name_idx + 1, 'item_id', item.item_id)
+        transactions.insert(account_name_idx + 2, 'institution_id', item.institution_id)
+        transactions.insert(account_name_idx + 3, 'institution_name', institution.get('name'))
 
-        # TODO set final column order (or insert the previous columns instead of appending)
         return transactions
     except plaid.ApiException as e:
         print(e)
