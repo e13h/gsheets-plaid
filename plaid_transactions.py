@@ -134,12 +134,22 @@ def get_transactions_from_plaid(access_token: str, num_days: int = 30) -> pd.Dat
         print(e)
 
 
-def get_transactions_from_gsheet() -> pd.DataFrame:
+def column_idx_to_str(n: int) -> str:
+    NUM_LETTERS = 26
+    A_ASCII = 65
+    result = ''
+    while n > 0:
+        n, remainder = divmod(n - 1, NUM_LETTERS)
+        result = chr(A_ASCII + remainder) + result
+    return result
+
+
+def get_transactions_from_gsheet(num_columns: int) -> pd.DataFrame:
     """Get the transactions already saved to the Google Sheet.
     """
     result = gsheets_service.spreadsheets().values().get(
         spreadsheetId=get_spreadsheet_id(),
-        range='A1:AC',
+        range=f'A1:{column_idx_to_str(num_columns)}',
     ).execute()
     rows = result.get('values', [])
     if not len(rows):
@@ -190,13 +200,12 @@ def merge_transactions(existing_transactions: pd.DataFrame, new_transactions: pd
 def fill_gsheet(transactions: pd.DataFrame):
     """Fill transaction data into Google Sheet.
     """
-    # TODO set range automatically (turn number of columns into A1 range)
     headers = transactions.columns.tolist()
     values = transactions.to_numpy().tolist()
     values.insert(0, headers)
     gsheets_service.spreadsheets().values().update(
         spreadsheetId=get_spreadsheet_id(),
-        range='A1:AC',
+        range=f'A1:{column_idx_to_str(len(headers))}',
         valueInputOption='USER_ENTERED',
         body={'values': values},
     ).execute()
@@ -273,7 +282,7 @@ def get_access_tokens() -> list[dict]:
 def main():
     """Put transaction data into Google Sheet.
     """
-    result = get_transactions_from_gsheet()
+    result = get_transactions_from_gsheet(29)  # FIXME get rid of magic number
     for token in get_access_tokens():
         new_transactions = get_transactions_from_plaid(token['access_token'], num_days=30)
         result = merge_transactions(result, new_transactions)
