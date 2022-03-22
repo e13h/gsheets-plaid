@@ -190,7 +190,6 @@ def merge_transactions(existing_transactions: pd.DataFrame, new_transactions: pd
 def fill_gsheet(transactions: pd.DataFrame):
     """Fill transaction data into Google Sheet.
     """
-    # TODO set datetime column format
     # TODO set range automatically (turn number of columns into A1 range)
     headers = transactions.columns.tolist()
     values = transactions.to_numpy().tolist()
@@ -201,6 +200,66 @@ def fill_gsheet(transactions: pd.DataFrame):
         valueInputOption='USER_ENTERED',
         body={'values': values},
     ).execute()
+
+
+def apply_gsheet_formatting(transactions: pd.DataFrame):
+    """Apply some formatting to the Google Sheet (datetime format, freeze
+    header, etc.).
+    """
+    datetime_format = {
+        'repeatCell': {
+            'range': {
+                'startColumnIndex': transactions.columns.get_loc('datetime'),
+                'endColumnIndex': transactions.columns.get_loc('datetime') + 1,
+            },
+            'cell': {
+                'userEnteredFormat': {
+                    'numberFormat': {
+                        'type': 'DATE',
+                        'pattern': 'yyyy-mm-dd hh:mm:ss'
+                    }
+                }
+            },
+            'fields': 'userEnteredFormat.numberFormat',
+        }
+    }
+    header_format = {
+        'repeatCell': {
+            'range': {
+                'startRowIndex': 0,
+                'endRowIndex': 1,
+            },
+            'cell': {
+                'userEnteredFormat': {
+                    'textFormat': {
+                        'bold': True,
+                    }
+                }
+            },
+            'fields': 'userEnteredFormat.textFormat',
+        }
+    }
+    freeze_header = {
+        'updateSheetProperties': {
+            'properties': {
+                'gridProperties': {
+                    'frozenRowCount': 1,
+                }
+            },
+            'fields': 'gridProperties.frozenRowCount',
+        }
+    }
+    # Send batch requests
+    requests = [
+        datetime_format,
+        header_format,
+        freeze_header,
+    ]
+    response = gsheets_service.spreadsheets().batchUpdate(
+        spreadsheetId=get_spreadsheet_id(),
+        body={'requests': requests},
+    ).execute()
+    print(response)
 
 
 def get_access_tokens() -> list[dict]:
@@ -219,6 +278,8 @@ def main():
         new_transactions = get_transactions_from_plaid(token['access_token'], num_days=30)
         result = merge_transactions(result, new_transactions)
     fill_gsheet(result)
+    apply_gsheet_formatting(result)
+
 
 if __name__ == '__main__':
     main()
