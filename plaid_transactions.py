@@ -1,11 +1,13 @@
 import json
 from datetime import datetime, timedelta
 
-import pandas as pd
 import numpy as np
+import pandas as pd
 import plaid
 from dotenv import dotenv_values
 from plaid.api import plaid_api
+from plaid.model.country_code import CountryCode
+from plaid.model.institutions_get_by_id_request import InstitutionsGetByIdRequest
 from plaid.model.transactions_get_request import TransactionsGetRequest
 from plaid.model.transactions_get_request_options import TransactionsGetRequestOptions
 
@@ -71,16 +73,22 @@ def get_transactions_from_plaid(access_token: str, num_days: int = 30) -> pd.Dat
     end_date = datetime.now()
     try:
         options = TransactionsGetRequestOptions()
-        request = TransactionsGetRequest(
+        transaction_request = TransactionsGetRequest(
             access_token=access_token,
             start_date=start_date.date(),
             end_date=end_date.date(),
             options=options
         )
-        response = client.transactions_get(request)
-        transactions = pd.DataFrame(response.to_dict().get('transactions'))[TRANSACTION_COLS]
-        accounts = pd.DataFrame(response.to_dict().get('accounts'))[ACCOUNT_COLS]
-        item = pd.Series(response.to_dict().get('item'))[ITEM_COLS]
+        transaction_response = client.transactions_get(transaction_request)
+        transactions = pd.DataFrame(transaction_response.to_dict().get('transactions'))[TRANSACTION_COLS]
+        accounts = pd.DataFrame(transaction_response.to_dict().get('accounts'))[ACCOUNT_COLS]
+        item = pd.Series(transaction_response.to_dict().get('item'))[ITEM_COLS]
+        institution_request = InstitutionsGetByIdRequest(
+            institution_id=item.institution_id,
+            country_codes=list(map(lambda x: CountryCode(x), ['US']))
+        )
+        institution_response = client.institutions_get_by_id(institution_request)
+        institution = pd.Series(institution_response.to_dict().get('institution'))
 
         # Convert datetime to string
         def fillna_datetime(row: pd.Series) -> datetime:
@@ -117,6 +125,7 @@ def get_transactions_from_plaid(access_token: str, num_days: int = 30) -> pd.Dat
         # Add item info
         transactions['item_id'] = item.item_id
         transactions['institution_id'] = item.institution_id
+        transactions['institution_name'] = institution.get('name')
 
         # TODO set final column order (or insert the previous columns instead of appending)
         return transactions
@@ -129,7 +138,7 @@ def get_transactions_from_gsheet() -> pd.DataFrame:
     """
     result = gsheets_service.spreadsheets().values().get(
         spreadsheetId=get_spreadsheet_id(),
-        range='A1:AB',
+        range='A1:AC',
     ).execute()
     rows = result.get('values', [])
     if not len(rows):
@@ -181,12 +190,13 @@ def fill_gsheet(transactions: pd.DataFrame):
     """Fill transaction data into Google Sheet.
     """
     # TODO set datetime column format
+    # TODO set range automatically (turn number of columns into A1 range)
     headers = transactions.columns.tolist()
     values = transactions.to_numpy().tolist()
     values.insert(0, headers)
     gsheets_service.spreadsheets().values().update(
         spreadsheetId=get_spreadsheet_id(),
-        range='A1:AB',
+        range='A1:AC',
         valueInputOption='USER_ENTERED',
         body={'values': values},
     ).execute()
