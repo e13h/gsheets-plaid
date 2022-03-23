@@ -71,7 +71,7 @@ def get_transactions_from_plaid(access_token: str, num_days: int = 30) -> pd.Dat
     """
     start_date = (datetime.now() - timedelta(days=num_days))
     end_date = datetime.now()
-    options = TransactionsGetRequestOptions()
+    options = TransactionsGetRequestOptions(include_personal_finance_category=True)
     transaction_request = TransactionsGetRequest(
         access_token=access_token,
         start_date=start_date.date(),
@@ -109,11 +109,20 @@ def get_transactions_from_plaid(access_token: str, num_days: int = 30) -> pd.Dat
     # Expand location
     locations = transactions.location.apply(pd.Series)
 
+    # Expand personal finance category
+    personal_finance_categories = transactions.personal_finance_category.apply(pd.Series)
+    personal_finance_categories.rename(
+        columns={
+            'primary': 'personal_finance_category_primary',
+            'detailed': 'personal_finance_category_detailed'
+        }, inplace=True)
+
     # Combine expanded columns
     transactions = pd.concat(
         (
-            transactions.drop(columns=['location', 'category']),
+            transactions.drop(columns=['location', 'category', 'personal_finance_category']),
             categories,
+            personal_finance_categories,
             locations,
         ), axis=1)
 
