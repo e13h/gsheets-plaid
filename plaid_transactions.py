@@ -147,7 +147,11 @@ def get_transactions_from_gsheet() -> pd.DataFrame:
     transactions = pd.DataFrame(rows[1:], columns=rows[0])
 
     # Turn pending into a boolean column
-    transactions['pending'] = transactions.pending.apply(lambda x: x.lower() == 'true')
+    def convert_pending(cell: str) -> bool:
+        if cell is None:
+            return ''
+        return cell.lower() == 'true'
+    transactions['pending'] = transactions.pending.apply(convert_pending)
     return transactions
 
 
