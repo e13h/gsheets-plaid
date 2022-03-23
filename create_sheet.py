@@ -46,8 +46,8 @@ def get_spreadsheet_id() -> str:
         spreadsheet_id = config.get("spreadsheetId")
     else:
         print('Creating a new spreadsheet...')
-        test_spreadsheet = {'properties': {'title': 'Test Sheet'}}
-        result = gsheets_service.spreadsheets().create(body=test_spreadsheet).execute()
+        spreadsheet = {'properties': {'title': 'Finance Tracker'}}
+        result = gsheets_service.spreadsheets().create(body=spreadsheet).execute()
         spreadsheet_id = result.get("spreadsheetId")
         with open(CONFIG.get('GOOGLE_SHEETS_CONFIG_FILENAME'), 'w') as config_file:
             json.dump({"spreadsheetId": spreadsheet_id}, config_file)
