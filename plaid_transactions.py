@@ -201,7 +201,7 @@ def fill_gsheet(transactions: pd.DataFrame):
     """Fill transaction data into Google Sheet.
     """
     headers = transactions.columns.tolist()
-    values = transactions.to_numpy().tolist()
+    values = transactions.fillna('').to_numpy().tolist()
     values.insert(0, headers)
     gsheets_service.spreadsheets().values().update(
         spreadsheetId=get_spreadsheet_id(),
