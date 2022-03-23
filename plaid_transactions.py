@@ -71,67 +71,64 @@ def get_transactions_from_plaid(access_token: str, num_days: int = 30) -> pd.Dat
     """
     start_date = (datetime.now() - timedelta(days=num_days))
     end_date = datetime.now()
-    try:
-        options = TransactionsGetRequestOptions()
-        transaction_request = TransactionsGetRequest(
-            access_token=access_token,
-            start_date=start_date.date(),
-            end_date=end_date.date(),
-            options=options
-        )
-        transaction_response = client.transactions_get(transaction_request)
-        transactions = pd.DataFrame(transaction_response.to_dict().get('transactions'))[TRANSACTION_COLS]
-        accounts = pd.DataFrame(transaction_response.to_dict().get('accounts'))[ACCOUNT_COLS]
-        item = pd.Series(transaction_response.to_dict().get('item'))[ITEM_COLS]
-        institution_request = InstitutionsGetByIdRequest(
-            institution_id=item.institution_id,
-            country_codes=list(map(lambda x: CountryCode(x), ['US']))
-        )
-        institution_response = client.institutions_get_by_id(institution_request)
-        institution = pd.Series(institution_response.to_dict().get('institution'))
+    options = TransactionsGetRequestOptions()
+    transaction_request = TransactionsGetRequest(
+        access_token=access_token,
+        start_date=start_date.date(),
+        end_date=end_date.date(),
+        options=options
+    )
+    transaction_response = client.transactions_get(transaction_request)
+    transactions = pd.DataFrame(transaction_response.to_dict().get('transactions'))[TRANSACTION_COLS]
+    accounts = pd.DataFrame(transaction_response.to_dict().get('accounts'))[ACCOUNT_COLS]
+    item = pd.Series(transaction_response.to_dict().get('item'))[ITEM_COLS]
+    institution_request = InstitutionsGetByIdRequest(
+        institution_id=item.institution_id,
+        country_codes=list(map(lambda x: CountryCode(x), ['US']))
+    )
+    institution_response = client.institutions_get_by_id(institution_request)
+    institution = pd.Series(institution_response.to_dict().get('institution'))
 
-        # Convert datetime to string
-        def fillna_datetime(row: pd.Series) -> datetime:
-            if row.datetime is not None:
-                return row.datetime
-            return datetime.combine(row.date, datetime.min.time())
-        transactions['datetime'] = transactions.apply(fillna_datetime, axis=1)
-        transactions['datetime'] = transactions['datetime'].dt.strftime('%Y-%m-%d %H:%M:%S')
-        transactions['date'] = transactions['date'].astype(str)
+    # Convert datetime to string
+    def fillna_datetime(row: pd.Series) -> datetime:
+        if row.datetime is not None:
+            return row.datetime
+        return datetime.combine(row.date, datetime.min.time())
+    transactions['datetime'] = transactions.apply(fillna_datetime, axis=1)
+    transactions['datetime'] = transactions['datetime'].dt.strftime('%Y-%m-%d %H:%M:%S')
+    transactions['date'] = transactions['date'].astype(str)
 
-        # Expand categories
-        categories = (
-            transactions
-            .category
-            .apply(pd.Series)
-            .fillna('')
-            .rename(columns={0: 'category1', 1: 'category2', 2: 'category3'}))
+    # Expand categories
+    categories = (
+        transactions
+        .category
+        .apply(pd.Series)
+        .fillna('')
+        .rename(columns={0: 'category1', 1: 'category2', 2: 'category3'}))
 
-        # Expand location
-        locations = transactions.location.apply(pd.Series)
+    # Expand location
+    locations = transactions.location.apply(pd.Series)
 
-        # Combine expanded columns
-        transactions = pd.concat(
-            (
-                transactions.drop(columns=['location', 'category']),
-                categories,
-                locations,
-            ), axis=1)
+    # Combine expanded columns
+    transactions = pd.concat(
+        (
+            transactions.drop(columns=['location', 'category']),
+            categories,
+            locations,
+        ), axis=1)
 
-        # Add account info
-        accounts.set_index('account_id', inplace=True)
-        account_name_idx = TRANSACTION_COLS.index('account_id') + 1
-        account_name = transactions.account_id.apply(lambda x: accounts.loc[x].get('name'))
-        transactions.insert(account_name_idx, 'account_name', account_name)
+    # Add account info
+    accounts.set_index('account_id', inplace=True)
+    account_name_idx = TRANSACTION_COLS.index('account_id') + 1
+    account_name = transactions.account_id.apply(lambda x: accounts.loc[x].get('name'))
+    transactions.insert(account_name_idx, 'account_name', account_name)
 
-        # Add item info
-        transactions.insert(account_name_idx + 1, 'item_id', item.item_id)
-        transactions.insert(account_name_idx + 2, 'institution_id', item.institution_id)
-        transactions.insert(account_name_idx + 3, 'institution_name', institution.get('name'))
+    # Add item info
+    transactions.insert(account_name_idx + 1, 'item_id', item.item_id)
+    transactions.insert(account_name_idx + 2, 'institution_id', item.institution_id)
+    transactions.insert(account_name_idx + 3, 'institution_name', institution.get('name'))
 
-        return transactions
-    except plaid.ApiException as e:
-        print(e)
+    return transactions
 
 
 def get_transactions_from_gsheet() -> pd.DataFrame:
@@ -278,8 +275,12 @@ def main():
     """
     result = get_transactions_from_gsheet()
     for token in get_access_tokens():
-        new_transactions = get_transactions_from_plaid(token['access_token'], num_days=30)
-        result = merge_transactions(result, new_transactions)
+        try:
+            new_transactions = get_transactions_from_plaid(token['access_token'], num_days=30)
+            result = merge_transactions(result, new_transactions)
+        except plaid.ApiException as e:
+            print(e)
+            continue
     fill_gsheet(result)
     apply_gsheet_formatting(result)
 
