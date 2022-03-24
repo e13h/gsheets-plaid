@@ -47,18 +47,22 @@ ITEM_COLS = [
 
 if CONFIG.get('PLAID_ENV') == 'sandbox':
     host = plaid.Environment.Sandbox
+    secret = CONFIG.get('PLAID_SECRET_SANDBOX')
 elif CONFIG.get('PLAID_ENV') == 'development':
     host = plaid.Environment.Development
+    secret = CONFIG.get('PLAID_SECRET_DEVELOPMENT')
 elif CONFIG.get('PLAID_ENV') == 'production':
     host = plaid.Environment.Production
+    secret = CONFIG.get('PLAID_SECRET_PRODUCTION')
 else:
     host = plaid.Environment.Sandbox
+    secret = CONFIG.get('PLAID_SECRET_SANDBOX')
 
 plaid_config = plaid.Configuration(
     host=host,
     api_key={
         'clientId': CONFIG.get('PLAID_CLIENT_ID'),
-        'secret': CONFIG.get('PLAID_SECRET'),
+        'secret': secret,
         'plaidVersion': '2020-09-14',
     }
 )
