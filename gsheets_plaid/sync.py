@@ -46,34 +46,39 @@ ITEM_COLS = [
     'consent_expiration_time',
 ]
 
-if CONFIG.get('PLAID_ENV') == 'sandbox':
-    host = plaid.Environment.Sandbox
-    secret = CONFIG.get('PLAID_SECRET_SANDBOX')
-elif CONFIG.get('PLAID_ENV') == 'development':
-    host = plaid.Environment.Development
-    secret = CONFIG.get('PLAID_SECRET_DEVELOPMENT')
-elif CONFIG.get('PLAID_ENV') == 'production':
-    host = plaid.Environment.Production
-    secret = CONFIG.get('PLAID_SECRET_PRODUCTION')
-else:
-    host = plaid.Environment.Sandbox
-    secret = CONFIG.get('PLAID_SECRET_SANDBOX')
 
-plaid_config = plaid.Configuration(
-    host=host,
-    api_key={
-        'clientId': CONFIG.get('PLAID_CLIENT_ID'),
-        'secret': secret,
-        'plaidVersion': '2020-09-14',
-    }
-)
+def generate_plaid_client() -> plaid_api.PlaidApi:
+    if CONFIG.get('PLAID_ENV') == 'sandbox':
+        host = plaid.Environment.Sandbox
+        secret = CONFIG.get('PLAID_SECRET_SANDBOX')
+    elif CONFIG.get('PLAID_ENV') == 'development':
+        host = plaid.Environment.Development
+        secret = CONFIG.get('PLAID_SECRET_DEVELOPMENT')
+    elif CONFIG.get('PLAID_ENV') == 'production':
+        host = plaid.Environment.Production
+        secret = CONFIG.get('PLAID_SECRET_PRODUCTION')
+    else:
+        host = plaid.Environment.Sandbox
+        secret = CONFIG.get('PLAID_SECRET_SANDBOX')
 
-api_client = plaid.ApiClient(plaid_config)
-client = plaid_api.PlaidApi(api_client)
+    plaid_config = plaid.Configuration(
+        host=host,
+        api_key={
+            'clientId': CONFIG.get('PLAID_CLIENT_ID'),
+            'secret': secret,
+            'plaidVersion': '2020-09-14',
+        }
+    )
+
+    api_client = plaid.ApiClient(plaid_config)
+    plaid_client = plaid_api.PlaidApi(api_client)
+    return plaid_client
+
 
 def get_transactions_from_plaid(access_token: str, num_days: int = 30) -> pd.DataFrame:
     """Get transaction data from Plaid for a given access token.
     """
+    client = generate_plaid_client()
     start_date = (datetime.now() - timedelta(days=num_days))
     end_date = datetime.now()
     options = TransactionsGetRequestOptions(include_personal_finance_category=True)
