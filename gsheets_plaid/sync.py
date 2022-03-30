@@ -274,11 +274,10 @@ def apply_gsheet_formatting(transactions: pd.DataFrame):
         header_format,
         freeze_header,
     ]
-    response = gsheets_service.spreadsheets().batchUpdate(
+    gsheets_service.spreadsheets().batchUpdate(
         spreadsheetId=get_spreadsheet_id(),
         body={'requests': requests},
     ).execute()
-    print(response)
 
 
 def get_access_tokens() -> list[dict]:
