@@ -1,5 +1,6 @@
 import json
 from datetime import datetime, timedelta
+from importlib.resources import files
 
 import numpy as np
 import pandas as pd
@@ -281,7 +282,10 @@ def apply_gsheet_formatting(transactions: pd.DataFrame):
 def get_access_tokens() -> list[dict]:
     """Load the access tokens from file.
     """
-    with open(CONFIG.get('PLAID_TOKENS_OUTPUT_FILENAME')) as file:
+    token_pkg = 'gsheets_plaid.resources.db.tokens'
+    token_filename = CONFIG.get('PLAID_TOKENS_OUTPUT_FILENAME')
+    token_resource = files(token_pkg).joinpath(token_filename)
+    with open(token_resource, 'r') as file:
         tokens = json.load(file)
     env_str = CONFIG.get('PLAID_ENV', 'sandbox').lower()
     tokens = [token for token in tokens if token['access_token'].startswith(f'access-{env_str}')]

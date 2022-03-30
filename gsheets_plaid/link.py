@@ -4,6 +4,7 @@ import shutil
 import subprocess
 import webbrowser
 from time import sleep
+from importlib.resources import files
 
 from gsheets_plaid.initialization import CONFIG
 
@@ -21,8 +22,12 @@ def run_link_server(port: int = None, env: str = None, redirect_uri: str = None)
         CONFIG['PLAID_ENV'] = env
     if redirect_uri:
         CONFIG['PLAID_SANDBOX_REDIRECT_URI'] = redirect_uri
+    files('gsheets_plaid.resources.db.tokens').joinpath('plaid_tokens.json')
+    token_filename = CONFIG['PLAID_TOKENS_OUTPUT_FILENAME']
+    token_resource = files('gsheets_plaid.resources.db.tokens').joinpath(token_filename)
+    CONFIG['PLAID_TOKENS_OUTPUT_FILENAME'] = str(token_resource)
     plaid_env.update(CONFIG)
-    p = subprocess.Popen(shlex.split(command), cwd='include/plaid_link_server', env=plaid_env)
+    p = subprocess.Popen(shlex.split(command), cwd='gsheets_plaid/resources/plaid_link_server', env=plaid_env)
 
     sleep(1)  # Wait for the server to start
 
