@@ -28,7 +28,7 @@ def run_link_server(port: int = None, env: str = None, redirect_uri: str = None)
     plaid_env.update(CONFIG)
     p = subprocess.Popen(shlex.split(command), cwd='include/plaid_link_server', env=plaid_env)
 
-    sleep(1)  # Wait for tiny-quickstart to start
+    sleep(1)  # Wait for the server to start
 
     # Direct the user to Plaid Link
     webbrowser.open(f'http://localhost:{CONFIG["PLAID_LINK_PORT"]}/', new=1, autoraise=True)
