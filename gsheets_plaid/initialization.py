@@ -1,21 +1,22 @@
 
-import os
 import shutil
-from importlib import resources
+from importlib.resources import files
 
 from dotenv import dotenv_values, set_key
 
 DB_PACKAGE = 'gsheets_plaid.resources.db'
-ENV_RESOURCE = resources.files(DB_PACKAGE).joinpath('.env')
+ENV_RESOURCE = files(DB_PACKAGE).joinpath('.env')
 if not ENV_RESOURCE.is_file():
-    TEMPLATE_ENV_RESOURCE = resources.files(DB_PACKAGE).joinpath('.env.example')
+    TEMPLATE_ENV_RESOURCE = files(DB_PACKAGE).joinpath('.env.example')
     shutil.copyfile(TEMPLATE_ENV_RESOURCE, ENV_RESOURCE)
-with resources.as_file(ENV_RESOURCE) as f:
-    CONFIG = dotenv_values(f)
+CONFIG = dotenv_values(ENV_RESOURCE)
 
 
 def is_initialized():
-    if not os.path.exists(CONFIG.get('GOOGLE_CREDENTIAL_FILENAME')):
+    token_pkg = 'gsheets_plaid.resources.db.tokens'
+    creds_filename = CONFIG.get('GOOGLE_CREDENTIAL_FILENAME')
+    creds_resource = files(token_pkg).joinpath(creds_filename)
+    if not creds_resource.is_file():
         return False
     if CONFIG.get('PLAID_ENV', None) == 'sandbox':
         required_key = 'PLAID_SECRET_SANDBOX'
@@ -43,10 +44,9 @@ def update_exposed_env_variables():
         if not value:  # User just pressed enter (keep existing value)
             return
         if not value.strip():  # User entered whitespace (clear the value)
-            value = None
+            value = ''
         # User entered a value (use that value)
-        with resources.as_file(ENV_RESOURCE) as f:
-            set_key(f, env_variable, value, quote_mode='auto')
+        set_key(ENV_RESOURCE, env_variable, value, quote_mode='auto')
 
     print('Enter the following values. Leave blank to keep the existing value.')
     print('Submit a space or tab to clear the value.')
@@ -67,14 +67,17 @@ def save_credentials():
     """
     saved = False
     while not saved:
-        creds_exist = os.path.exists(CONFIG.get('GOOGLE_CREDENTIAL_FILENAME'))
+        token_pkg = 'gsheets_plaid.resources.db.tokens'
+        creds_filename = CONFIG.get('GOOGLE_CREDENTIAL_FILENAME')
+        creds_resource = files(token_pkg).joinpath(creds_filename)
+        creds_exist = creds_resource.is_file()
         found = "Existing creds found" if creds_exist else "No creds found"
         prompt = f'Enter the path to the Google Credentials JSON file [{found}]: '
         filepath = input(prompt)
         if not filepath.strip():
             return
         try:
-            shutil.copyfile(filepath, CONFIG.get('GOOGLE_CREDENTIAL_FILENAME'))
+            shutil.copyfile(filepath, creds_resource)
             saved = True
         except FileNotFoundError:
             print('File not found. Please try again.')
