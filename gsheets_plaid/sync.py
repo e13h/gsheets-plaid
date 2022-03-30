@@ -286,6 +286,8 @@ def get_access_tokens() -> list[dict]:
     """
     with open(CONFIG.get('PLAID_TOKENS_OUTPUT_FILENAME')) as file:
         tokens = json.load(file)
+    env_str = CONFIG.get('PLAID_ENV', 'sandbox').lower()
+    tokens = [token for token in tokens if token['access_token'].startswith(f'access-{env_str}')]
     return tokens
 
 
