@@ -1,8 +1,8 @@
 import argparse
 import sys
 
-from gsheets_plaid.initialization import is_initialized, initialize
-
+from gsheets_plaid.initialization import initialize, is_initialized
+from gsheets_plaid.link import run_link_server
 
 # Main parser
 description = 'Sync transaction data to Google Sheets using Plaid.'
