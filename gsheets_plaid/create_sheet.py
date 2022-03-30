@@ -37,17 +37,19 @@ def get_creds(scopes: list[str]) -> Credentials:
 creds = get_creds(SCOPES)
 gsheets_service = build('sheets', 'v4', credentials=creds)
 
-def get_spreadsheet_id() -> str:
+def get_spreadsheet_id(verbose: str = False) -> str:
     """Get the spreadsheet ID, or create a new one
     """
     spreadsheet_id = None
     if (os.path.exists(CONFIG.get('GOOGLE_SHEETS_CONFIG_FILENAME'))):
-        print('Found an existing spreadsheet...')
+        if verbose:
+            print('Found an existing spreadsheet...')
         with open(CONFIG.get('GOOGLE_SHEETS_CONFIG_FILENAME')) as config_file:
             config = json.load(config_file)
         spreadsheet_id = config.get("spreadsheetId")
     else:
-        print('Creating a new spreadsheet...')
+        if verbose:
+            print('Creating a new spreadsheet...')
         spreadsheet = {'properties': {'title': 'Finance Tracker'}}
         result = gsheets_service.spreadsheets().create(body=spreadsheet).execute()
         spreadsheet_id = result.get("spreadsheetId")

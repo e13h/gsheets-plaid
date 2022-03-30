@@ -154,7 +154,7 @@ def get_transactions_from_gsheet() -> pd.DataFrame:
     """Get the transactions already saved to the Google Sheet.
     """
     result = gsheets_service.spreadsheets().values().get(
-        spreadsheetId=get_spreadsheet_id(),
+        spreadsheetId=get_spreadsheet_id(verbose=True),
         range='Sheet1',
     ).execute()
     rows = result.get('values', [])
