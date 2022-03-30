@@ -4,7 +4,6 @@ from datetime import datetime, timedelta
 import numpy as np
 import pandas as pd
 import plaid
-from dotenv import dotenv_values
 from plaid.api import plaid_api
 from plaid.model.country_code import CountryCode
 from plaid.model.institutions_get_by_id_request import InstitutionsGetByIdRequest
@@ -12,9 +11,8 @@ from plaid.model.transactions_get_request import TransactionsGetRequest
 from plaid.model.transactions_get_request_options import TransactionsGetRequestOptions
 
 from gsheets_plaid.create_sheet import get_spreadsheet_id, gsheets_service
-from gsheets_plaid.initialization import DOTENV_PATH
+from gsheets_plaid.initialization import CONFIG
 
-CONFIG = dotenv_values(DOTENV_PATH)
 TRANSACTION_COLS = [
     'transaction_id',
     'pending_transaction_id',

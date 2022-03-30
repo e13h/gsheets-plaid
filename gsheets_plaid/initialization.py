@@ -1,15 +1,17 @@
 
 import os
 import shutil
+from importlib import resources
 
 from dotenv import dotenv_values, set_key
 
-DOTENV_PATH = 'db/.env'
-if not os.path.exists(DOTENV_PATH):
-    DOTENV_TEMPLATE_PATH = 'db/.env.example'
-    shutil.copyfile(DOTENV_TEMPLATE_PATH, DOTENV_PATH)
-
-CONFIG = dotenv_values(DOTENV_PATH)
+DB_PACKAGE = 'gsheets_plaid.resources.db'
+ENV_RESOURCE = resources.files(DB_PACKAGE).joinpath('.env')
+if not ENV_RESOURCE.is_file():
+    TEMPLATE_ENV_RESOURCE = resources.files(DB_PACKAGE).joinpath('.env.example')
+    shutil.copyfile(TEMPLATE_ENV_RESOURCE, ENV_RESOURCE)
+with resources.as_file(ENV_RESOURCE) as f:
+    CONFIG = dotenv_values(f)
 
 
 def is_initialized():
@@ -43,7 +45,8 @@ def update_exposed_env_variables():
         if not value.strip():  # User entered whitespace (clear the value)
             value = None
         # User entered a value (use that value)
-        set_key(DOTENV_PATH, env_variable, value, quote_mode='auto')
+        with resources.as_file(ENV_RESOURCE) as f:
+            set_key(f, env_variable, value, quote_mode='auto')
 
     print('Enter the following values. Leave blank to keep the existing value.')
     print('Submit a space or tab to clear the value.')

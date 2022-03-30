@@ -5,11 +5,7 @@ import subprocess
 import webbrowser
 from time import sleep
 
-from dotenv import dotenv_values
-
-from gsheets_plaid.initialization import DOTENV_PATH
-
-CONFIG = dotenv_values(DOTENV_PATH)
+from gsheets_plaid.initialization import CONFIG
 
 
 def run_link_server(port: int = None, env: str = None, redirect_uri: str = None):
@@ -17,7 +13,7 @@ def run_link_server(port: int = None, env: str = None, redirect_uri: str = None)
     """
     # Start tiny-quickstart
     command = f'{shutil.which("npm")} start'
-    print(shlex.split(command))
+    print(shlex.split(command))  # FIXME delete this
     plaid_env = os.environ.copy()
     if port:
         CONFIG['PLAID_LINK_PORT'] = port
