@@ -7,7 +7,9 @@ from google.oauth2.credentials import Credentials
 from google_auth_oauthlib.flow import InstalledAppFlow
 from googleapiclient.discovery import build
 
-CONFIG = dotenv_values('.env')
+from gsheets_plaid.initialization import DOTENV_PATH
+
+CONFIG = dotenv_values(DOTENV_PATH)
 SCOPES = ['https://www.googleapis.com/auth/drive.file']
 
 def get_creds(scopes: list[str]) -> Credentials:

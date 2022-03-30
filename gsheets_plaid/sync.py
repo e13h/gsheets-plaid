@@ -11,9 +11,10 @@ from plaid.model.institutions_get_by_id_request import InstitutionsGetByIdReques
 from plaid.model.transactions_get_request import TransactionsGetRequest
 from plaid.model.transactions_get_request_options import TransactionsGetRequestOptions
 
-from create_sheet import get_spreadsheet_id, gsheets_service
+from gsheets_plaid.create_sheet import get_spreadsheet_id, gsheets_service
+from gsheets_plaid.initialization import DOTENV_PATH
 
-CONFIG = dotenv_values('.env')
+CONFIG = dotenv_values(DOTENV_PATH)
 TRANSACTION_COLS = [
     'transaction_id',
     'pending_transaction_id',

@@ -6,7 +6,8 @@ from dotenv import dotenv_values, set_key
 
 DOTENV_PATH = 'db/.env'
 if not os.path.exists(DOTENV_PATH):
-    shutil.copyfile('db/.env.example', DOTENV_PATH)
+    DOTENV_TEMPLATE_PATH = 'db/.env.example'
+    shutil.copyfile(DOTENV_TEMPLATE_PATH, DOTENV_PATH)
 
 CONFIG = dotenv_values(DOTENV_PATH)
 
