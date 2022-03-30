@@ -290,13 +290,15 @@ def get_access_tokens() -> list[dict]:
     return tokens
 
 
-def main():
+def sync_transactions(plaid_env: str = None, num_days: int = 30):
     """Put transaction data into Google Sheet.
     """
+    if plaid_env:
+        CONFIG['PLAID_ENV'] = plaid_env
     result = get_transactions_from_gsheet()
     for token in get_access_tokens():
         try:
-            new_transactions = get_transactions_from_plaid(token['access_token'], num_days=30)
+            new_transactions = get_transactions_from_plaid(token['access_token'], num_days)
             result = merge_transactions(result, new_transactions)
         except plaid.ApiException as e:
             print(e)
@@ -306,4 +308,4 @@ def main():
 
 
 if __name__ == '__main__':
-    main()
+    sync_transactions()
