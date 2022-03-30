@@ -1,9 +1,6 @@
 import argparse
 import sys
 
-from gsheets_plaid.initialization import initialize, is_initialized
-from gsheets_plaid.link import run_link_server
-from gsheets_plaid.sync import sync_transactions
 
 # Main parser
 description = 'Sync transaction data to Google Sheets using Plaid.'
@@ -45,12 +42,17 @@ if len(sys.argv) == 1:
 
 
 args = parser.parse_args()
+
+from gsheets_plaid.initialization import is_initialized
 if not is_initialized() and args.action != 'init':
     parser.error('Please run "gsheets_plaid init" before running any other commands.')
 
 if args.action == 'init':
+    from gsheets_plaid.initialization import initialize
     initialize()
 elif args.action == 'link':
+    from gsheets_plaid.link import run_link_server
     run_link_server(port=args.port, env=args.env, redirect_uri=args.redirect_uri)
 elif args.action == 'sync':
+    from gsheets_plaid.sync import sync_transactions
     sync_transactions(plaid_env=args.env, num_days=args.days)
