@@ -1,5 +1,5 @@
 import json
-import os.path
+from importlib import resources
 
 from google.auth.transport.requests import Request
 from google.oauth2.credentials import Credentials
@@ -17,19 +17,26 @@ def get_creds(scopes: list[str]) -> Credentials:
     # The file token.json stores the user's access and refresh tokens, and is
     # created automatically when the authorization flow completes for the first
     # time.
-    if os.path.exists(CONFIG.get('GOOGLE_TOKEN_FILENAME')):
-        creds = Credentials.from_authorized_user_file(CONFIG.get('GOOGLE_TOKEN_FILENAME'), scopes)
+    token_pkg = 'gsheets_plaid.resources.db.tokens'
+    token_resource = resources.files(token_pkg).joinpath(CONFIG.get('GOOGLE_TOKEN_FILENAME'))
+    if token_resource.is_file():
+        with resources.as_file(token_resource) as f:
+            creds = Credentials.from_authorized_user_file(f, scopes)
     # If there are no (valid) credentials available, let the user log in.
     if not creds or not creds.valid:
         if creds and creds.expired and creds.refresh_token:
             creds.refresh(Request())
         else:
-            flow = InstalledAppFlow.from_client_secrets_file(
-                CONFIG.get('GOOGLE_CREDENTIAL_FILENAME'), SCOPES)
+            creds_filename = CONFIG.get('GOOGLE_CREDENTIAL_FILENAME')
+            creds_resource = resources.files(token_pkg).joinpath(creds_filename)
+            assert creds_resource.is_file()
+            with resources.as_file(creds_resource) as f:
+                flow = InstalledAppFlow.from_client_secrets_file(f, SCOPES)
             creds = flow.run_local_server(port=0)
         # Save the credentials for the next run
-        with open(CONFIG.get('GOOGLE_TOKEN_FILENAME'), 'w') as token:
-            token.write(creds.to_json())
+        with resources.as_file(token_resource) as f:
+            with open(f, 'w') as token:
+                token.write(creds.to_json())
     return creds
 
 creds = get_creds(SCOPES)
@@ -39,11 +46,15 @@ def get_spreadsheet_id(verbose: str = False) -> str:
     """Get the spreadsheet ID, or create a new one
     """
     spreadsheet_id = None
-    if (os.path.exists(CONFIG.get('GOOGLE_SHEETS_CONFIG_FILENAME'))):
+    token_pkg = 'gsheets_plaid.resources.db.tokens'
+    config_filename = CONFIG.get('GOOGLE_SHEETS_CONFIG_FILENAME')
+    config_resource = resources.files(token_pkg).joinpath(config_filename)
+    if config_resource.is_file():
         if verbose:
             print('Found an existing spreadsheet...')
-        with open(CONFIG.get('GOOGLE_SHEETS_CONFIG_FILENAME')) as config_file:
-            config = json.load(config_file)
+        with resources.as_file(config_resource) as f:
+            with open(f) as config_file:
+                config = json.load(config_file)
         spreadsheet_id = config.get("spreadsheetId")
     else:
         if verbose:
@@ -51,8 +62,9 @@ def get_spreadsheet_id(verbose: str = False) -> str:
         spreadsheet = {'properties': {'title': 'Finance Tracker'}}
         result = gsheets_service.spreadsheets().create(body=spreadsheet).execute()
         spreadsheet_id = result.get("spreadsheetId")
-        with open(CONFIG.get('GOOGLE_SHEETS_CONFIG_FILENAME'), 'w') as config_file:
-            json.dump({"spreadsheetId": spreadsheet_id}, config_file)
+        with resources.as_file(config_resource) as f:
+            with open(f, 'w') as config_file:
+                json.dump({"spreadsheetId": spreadsheet_id}, config_file)
     return spreadsheet_id
 
 
