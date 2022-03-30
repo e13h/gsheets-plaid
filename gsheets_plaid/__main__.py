@@ -45,3 +45,5 @@ if not is_initialized() and args.action != 'init':
 print(args)
 if args.action == 'init':
     initialize()
+elif args.action == 'link':
+    run_link_server(port=args.port, env=args.env, redirect_uri=args.redirect_uri)
