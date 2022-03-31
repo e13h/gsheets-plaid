@@ -27,7 +27,8 @@ def run_link_server(port: int = None, env: str = None, redirect_uri: str = None)
     token_resource = files('gsheets_plaid.resources.db.tokens').joinpath(token_filename)
     CONFIG['PLAID_TOKENS_OUTPUT_FILENAME'] = str(token_resource)
     plaid_env.update(CONFIG)
-    p = subprocess.Popen(shlex.split(command), cwd='gsheets_plaid/resources/plaid_link_server', env=plaid_env)
+    working_dir = str(files('gsheets_plaid.resources.plaid_link_server'))
+    p = subprocess.Popen(shlex.split(command), cwd=working_dir, env=plaid_env)
 
     sleep(1)  # Wait for the server to start
 
