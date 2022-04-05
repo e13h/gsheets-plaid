@@ -1,4 +1,5 @@
 import json
+import webbrowser
 from datetime import datetime, timedelta
 from importlib.resources import files
 
@@ -292,6 +293,13 @@ def get_access_tokens() -> list[dict]:
     return tokens
 
 
+def get_spreadsheet_url() -> str:
+    """Get the URL of the Google Sheet.
+    """
+    response = gsheets_service.spreadsheets().get(spreadsheetId=get_spreadsheet_id()).execute()
+    return response.get('spreadsheetUrl')
+
+
 def sync_transactions(plaid_env: str = None, num_days: int = 30):
     """Put transaction data into Google Sheet.
     """
@@ -307,6 +315,7 @@ def sync_transactions(plaid_env: str = None, num_days: int = 30):
             continue
     fill_gsheet(result)
     apply_gsheet_formatting(result)
+    webbrowser.open(get_spreadsheet_url(), new=1, autoraise=True)
 
 
 if __name__ == '__main__':
