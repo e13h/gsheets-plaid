@@ -1,0 +1,15 @@
+<!DOCTYPE html>
+<html>
+<head>
+
+</head>
+<body>
+    <script src="https://cdn.plaid.com/link/v2/stable/link-initialize.js"></script>
+    <script src="{{ url_for('static', filename='plaid.js') }}"></script>
+    <script type="text/javascript">
+        const linkToken = "{{ plaid_link_token }}";
+        localStorage.setItem("link_token", linkToken);
+        run_plaid_link(linkToken);
+    </script>
+</body>
+</html>
