@@ -4,7 +4,6 @@ A spring break project to get my bank transaction data in Google Sheets without 
 ## Usage
 ### Prerequisites
 * Python 3.10 or later
-* [NodeJS](https://nodejs.org/) (I like to [install via a package manager](https://nodejs.org/tr/download/package-manager/))
 
 ### Installation
 Using a virtualenv is a good idea.
