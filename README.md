@@ -1,6 +1,10 @@
 # GSheets-Plaid
 A spring break project to get my bank transaction data in Google Sheets without using Google Apps Script.
 
+`gsheets-plaid` is a tool for getting your raw bank transaction data into a Google Sheets spreadsheet, to enable you to make your own formulas and charts for tracking spending, making goals, etc. This app is 100% free (assuming you don't already have a bunch of Google Cloud projects), but there is a bit of one-time setting up to do to get your Google and Plaid credentials in place. This README contains all the instructions to get you from a fresh install of the package to bank transactions in a Google Sheets file.
+
+Please open an issue if something isn't working or if the documentation isn't clear.
+
 ## Usage
 ### Prerequisites
 * Python 3.10 or later
@@ -61,7 +65,7 @@ python3 -m gsheets_plaid link
 ```
 If you are using the `sandbox` environment, note that the credentials are provided at the bottom of the screen. If you are using the `development` environment, use your actual bank account credentials. Note that you are only given 5 tokens to use in the development environment, but if you submit a ticket on Plaid Dashboard, you can get it bumped up to 100 tokens, which should be more than plenty for personal usage.
 
-Once you have added all the bank accounts you want, close the browser tab and enter `CTRL+C` to kill the web server process.
+Once you have added all the bank accounts you want, close the browser tab and enter `CTRL+C` in the terminal you started the `link` command in to kill the web server process.
 
 ### Sync transaction data with Google Sheets
 To sync your transactions from the banks you signed in with, run this command in the terminal
@@ -71,3 +75,26 @@ python3 -m gsheets_plaid sync
 If this is the first time you're running the command, you'll see a new browser tab open and be asked to give this developer application permission to use Google Sheets. You should only have to do this once. A new finance tracker spreadsheet will be created and the transaction data will be synced to `Sheet1`. Subsequent runs of this command will reuse the same spreadsheet.
 
 That's it! Hopefully you're inspired to write some cool formulas and make neat charts using this raw transaction data.
+
+---
+
+## Publishing new releases
+(for maintainers)
+
+1. Tag the main branch
+```
+git tag v[insert-version-here]
+```
+2. Push latest commits with tags
+```
+git push origin --tags
+```
+3. Build repo
+```
+python -m build
+```
+4. Upload distribution archives to PyPi
+```
+python -m twine upload dist/*
+```
+5. Create new release on GitHub
