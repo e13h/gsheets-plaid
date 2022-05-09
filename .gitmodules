@@ -1,4 +1,0 @@
-[submodule "tiny-quickstart"]
-	path = gsheets_plaid/resources/plaid_link_server
-	url = git@github.com:evanphilipsmith/tiny-quickstart.git
-	branch = main
