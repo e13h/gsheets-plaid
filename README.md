@@ -46,6 +46,9 @@ Create a Plaid developer account [here](https://dashboard.plaid.com/signup).
 
 After you have created an account, go to Team Settings > Keys. You should see your `client_id`, as well as Development and Sandbox secrets.
 
+#### Register the redirect URI in the Plaid Dashboard
+Add the redirect URI to the [list of allowed redirect URIs in the Plaid Dashboard](https://dashboard.plaid.com/team/api). By default, the redirect URI is `https://localhost:8080/oauth`. In the next step (when you run the `init` command), you'll have the option to change the redirect URI from the default to something else. If you change the redirect URI, you **must** register the new one or else Plaid will reject your requests.
+
 ### Configure `gsheets_plaid`
 To configure `gsheets_plaid` with all of these credentials we just created, run the following command:
 ```shell
