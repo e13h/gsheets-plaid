@@ -3,8 +3,8 @@ import os
 from importlib.resources import files
 
 import plaid
-from dotenv import dotenv_values
 from flask import Flask, redirect, render_template, request, url_for
+from gsheets_plaid.initialization import CONFIG
 from plaid.api import plaid_api
 from plaid.model.country_code import CountryCode
 from plaid.model.item_public_token_exchange_request import ItemPublicTokenExchangeRequest
@@ -12,35 +12,44 @@ from plaid.model.link_token_create_request import LinkTokenCreateRequest
 from plaid.model.link_token_create_request_user import LinkTokenCreateRequestUser
 from plaid.model.products import Products
 
-DB_PACKAGE = 'gsheets_plaid.resources.db'
-ENV_RESOURCE = files(DB_PACKAGE).joinpath('.env')
-CONFIG = dotenv_values(ENV_RESOURCE)
 
-if CONFIG['PLAID_ENV'] == 'sandbox':
-    host = plaid.Environment.Sandbox
-    secret = CONFIG['PLAID_SECRET_SANDBOX']
-elif CONFIG['PLAID_ENV'] == 'development':
-    host = plaid.Environment.Development
-    secret = CONFIG['PLAID_SECRET_DEVELOPMENT']
-elif CONFIG['PLAID_ENV'] == 'production':
-    host = plaid.Environment.Production
-    secret = CONFIG['PLAID_SECRET_PRODUCTION']
-else:
-    host = plaid.Environment.Sandbox
-    secret = CONFIG['PLAID_SECRET_SANDBOX']
+class LazyPlaidClient:
+    client = None
+    
+    def __getattr__(self, name):
+        if self.client is None:
+            self.load_client()
+        return getattr(self.client, name)
 
-configuration = plaid.Configuration(
-    host=host,
-    api_key={
-        'clientId': CONFIG['PLAID_CLIENT_ID'],
-        'secret': secret,
-        'plaidVersion': '2020-09-14'
-    }
-)
+    def load_client(self):
+        print(CONFIG)
+        if CONFIG['PLAID_ENV'] == 'sandbox':
+            host = plaid.Environment.Sandbox
+            secret = CONFIG['PLAID_SECRET_SANDBOX']
+        elif CONFIG['PLAID_ENV'] == 'development':
+            host = plaid.Environment.Development
+            secret = CONFIG['PLAID_SECRET_DEVELOPMENT']
+        elif CONFIG['PLAID_ENV'] == 'production':
+            host = plaid.Environment.Production
+            secret = CONFIG['PLAID_SECRET_PRODUCTION']
+        else:
+            host = plaid.Environment.Sandbox
+            secret = CONFIG['PLAID_SECRET_SANDBOX']
 
-api_client = plaid.ApiClient(configuration)
-client = plaid_api.PlaidApi(api_client)
+        configuration = plaid.Configuration(
+            host=host,
+            api_key={
+                'clientId': CONFIG['PLAID_CLIENT_ID'],
+                'secret': secret,
+                'plaidVersion': '2020-09-14'
+            }
+        )
 
+        api_client = plaid.ApiClient(configuration)
+        client = plaid_api.PlaidApi(api_client)
+        self.client = client
+
+client = LazyPlaidClient()
 
 app = Flask(__name__)
 
