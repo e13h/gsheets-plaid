@@ -1,4 +1,5 @@
 import json
+import os
 from importlib.resources import files
 
 import plaid
@@ -88,6 +89,9 @@ def save_tokens(item_id, access_token):
     token_pkg = 'gsheets_plaid.resources.db.tokens'
     token_filename = CONFIG.get('PLAID_TOKENS_OUTPUT_FILENAME')
     token_resource = files(token_pkg).joinpath(token_filename)
+    if not os.path.exists(token_resource):
+        with open(token_resource, 'x') as file:
+            json.dump([], file)
     with open(token_resource, 'r') as file:
         tokens: list = json.load(file)
     tokens.append({'item_id': item_id, 'access_token': access_token})
