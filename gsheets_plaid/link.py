@@ -16,8 +16,6 @@ def run_link_server(port: int = None, env: str = None, redirect_uri: str = None)
     if redirect_uri:
         CONFIG['PLAID_SANDBOX_REDIRECT_URI'] = redirect_uri
     t = threading.Thread(target=app.run, kwargs={'host': 'localhost', 'port': CONFIG['PLAID_LINK_PORT']})
-    # working_dir = str(files('gsheets_plaid.resources.plaid_link_server'))
-    # p = subprocess.Popen(shlex.split(command), cwd=working_dir)
     t.start()
     sleep(1)  # Wait for the server to start
 
