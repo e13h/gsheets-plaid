@@ -1,8 +1,10 @@
 
 import shutil
 from importlib.resources import files
+from textwrap import dedent
 
 from dotenv import dotenv_values, set_key
+from plaid.exceptions import ApiException
 
 DB_PACKAGE = 'gsheets_plaid.resources.db'
 ENV_RESOURCE = files(DB_PACKAGE).joinpath('.env')
@@ -34,6 +36,18 @@ def initialize():
     update_exposed_env_variables()
     save_credentials()
 
+    # Reload the redirect URI (will be different if port was changed)
+    CONFIG['PLAID_SANDBOX_REDIRECT_URI'] = dotenv_values(ENV_RESOURCE)['PLAID_SANDBOX_REDIRECT_URI']
+    try:
+        from gsheets_plaid.resources.plaid_link_server.server import request_link_token
+        request_link_token()
+    except ApiException:
+        msg = f"""
+        The Plaid redirect URI is {CONFIG["PLAID_SANDBOX_REDIRECT_URI"]}
+        Make sure this is set in your Plaid Dashboard!
+        """
+        print(dedent(msg))
+
 
 def update_exposed_env_variables():
     def user_set_key(env_variable: str) -> str:
@@ -47,6 +61,7 @@ def update_exposed_env_variables():
             value = ''
         # User entered a value (use that value)
         set_key(ENV_RESOURCE, env_variable, value, quote_mode='auto')
+        CONFIG[env_variable] = value
 
     print('Enter the following values. Leave blank to keep the existing value.')
     print('Submit a space or tab to clear the value.')
@@ -58,7 +73,6 @@ def update_exposed_env_variables():
     user_set_key('PLAID_SECRET_DEVELOPMENT')
     user_set_key('PLAID_SECRET_PRODUCTION')
     user_set_key('PLAID_ENV')
-    user_set_key('PLAID_SANDBOX_REDIRECT_URI')
     user_set_key('PLAID_LINK_PORT')
 
 
