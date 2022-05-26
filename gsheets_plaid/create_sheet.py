@@ -1,6 +1,8 @@
 import json
+import os
 from importlib.resources import files
 
+from google.auth.exceptions import RefreshError
 from google.auth.transport.requests import Request
 from google.oauth2.credentials import Credentials
 from google_auth_oauthlib.flow import InstalledAppFlow
@@ -9,35 +11,48 @@ from googleapiclient.discovery import build
 from gsheets_plaid.initialization import CONFIG
 
 SCOPES = ['https://www.googleapis.com/auth/drive.file']
+TOKEN_PKG = 'gsheets_plaid.resources.db.tokens'
 
-def get_creds(scopes: list[str]) -> Credentials:
+
+def load_creds(scopes: list[str]) -> Credentials:
     """Load or create credentials for Google Sheets API.
     """
     creds = None
     # The file token.json stores the user's access and refresh tokens, and is
     # created automatically when the authorization flow completes for the first
     # time.
-    token_pkg = 'gsheets_plaid.resources.db.tokens'
-    token_resource = files(token_pkg).joinpath(CONFIG.get('GOOGLE_TOKEN_FILENAME'))
+    token_resource = files(TOKEN_PKG).joinpath(CONFIG.get('GOOGLE_TOKEN_FILENAME'))
     if token_resource.is_file():
-        creds = Credentials.from_authorized_user_file(token_resource, scopes)
+        creds: Credentials = Credentials.from_authorized_user_file(token_resource, scopes)
     # If there are no (valid) credentials available, let the user log in.
     if not creds or not creds.valid:
         if creds and creds.expired and creds.refresh_token:
-            creds.refresh(Request())
+            try:
+                creds.refresh(Request())
+            except RefreshError:
+                # Refresh token expired
+                os.remove(token_resource)
+                creds = generate_new_creds()
         else:
-            creds_filename = CONFIG.get('GOOGLE_CREDENTIAL_FILENAME')
-            creds_resource = files(token_pkg).joinpath(creds_filename)
-            assert creds_resource.is_file()
-            flow = InstalledAppFlow.from_client_secrets_file(creds_resource, SCOPES)
-            creds = flow.run_local_server(port=0)
+            creds = generate_new_creds()
         # Save the credentials for the next run
         with open(token_resource, 'w') as token:
             token.write(creds.to_json())
     return creds
 
-creds = get_creds(SCOPES)
+
+def generate_new_creds() -> Credentials:
+    creds_filename = CONFIG.get('GOOGLE_CREDENTIAL_FILENAME')
+    creds_resource = files(TOKEN_PKG).joinpath(creds_filename)
+    assert creds_resource.is_file()
+    flow = InstalledAppFlow.from_client_secrets_file(creds_resource, SCOPES)
+    creds = flow.run_local_server(port=0)
+    return creds
+
+
+creds = load_creds(SCOPES)
 gsheets_service = build('sheets', 'v4', credentials=creds)
+
 
 def get_spreadsheet_id(verbose: str = False) -> str:
     """Get the spreadsheet ID, or create a new one
