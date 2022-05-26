@@ -8,8 +8,9 @@
     <script src="{{ url_for('static', filename='plaid.js') }}"></script>
     <script type="text/javascript">
         const linkToken = "{{ plaid_link_token }}";
+        const plaidLinkPort = "{{ plaid_link_port}}";
         localStorage.setItem("link_token", linkToken);
-        run_plaid_link(linkToken);
+        run_plaid_link(linkToken, plaidLinkPort);
     </script>
 </body>
 </html>
