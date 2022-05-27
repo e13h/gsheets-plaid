@@ -6,15 +6,11 @@ from gsheets_plaid.initialization import CONFIG
 from gsheets_plaid.resources.plaid_link_server.server import app
 
 
-def run_link_server(port: int = None, env: str = None, redirect_uri: str = None):
+def run_link_server(env: str = None):
     """Run Plaid Link flow.
     """
-    if port:
-        CONFIG['PLAID_LINK_PORT'] = port
     if env:
         CONFIG['PLAID_ENV'] = env
-    if redirect_uri:
-        CONFIG['PLAID_SANDBOX_REDIRECT_URI'] = redirect_uri
     t = threading.Thread(target=app.run, kwargs={'host': 'localhost', 'port': CONFIG['PLAID_LINK_PORT']})
     t.start()
     sleep(1)  # Wait for the server to start

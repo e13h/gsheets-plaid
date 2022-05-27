@@ -15,16 +15,11 @@ parser_init = subparsers.add_parser('init', help='initialize')
 
 # Parser for the 'link' command
 parser_link = subparsers.add_parser('link', help='link new accounts, manage existing accounts')
-parser_link.add_argument('--port', type=int, help='port to run Plaid Link on')
 parser_link.add_argument(
     '--env',
     type=str,
     choices=['sandbox', 'development', 'production'],
     help='temporarily run with a different env type (does NOT change config)')
-parser_link.add_argument(
-    '--redirect-uri',
-    type=str,
-    help='temporarily run with a different redirect URI (only affects OAuth banks, does NOT change config)')
 
 
 # Parser for the 'sync' command
@@ -52,7 +47,7 @@ if args.action == 'init':
     initialize()
 elif args.action == 'link':
     from gsheets_plaid.link import run_link_server
-    run_link_server(port=args.port, env=args.env, redirect_uri=args.redirect_uri)
+    run_link_server(env=args.env)
 elif args.action == 'sync':
     from gsheets_plaid.sync import sync_transactions
     sync_transactions(plaid_env=args.env, num_days=args.days)

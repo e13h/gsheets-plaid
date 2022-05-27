@@ -22,7 +22,6 @@ class LazyPlaidClient:
         return getattr(self.client, name)
 
     def load_client(self):
-        print(CONFIG)
         if CONFIG['PLAID_ENV'] == 'sandbox':
             host = plaid.Environment.Sandbox
             secret = CONFIG['PLAID_SECRET_SANDBOX']
@@ -56,7 +55,8 @@ app = Flask(__name__)
 @app.route('/')
 @app.route('/index')
 def index():
-    return render_template('index.html', plaid_link_token=request_link_token())
+    return render_template('index.html', plaid_link_token=request_link_token(),
+        plaid_link_port=CONFIG['PLAID_LINK_PORT'])
 
 @app.route('/oauth')
 def oauth():
