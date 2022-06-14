@@ -1,8 +1,6 @@
-import json
-import webbrowser
 from datetime import datetime, timedelta
-from importlib.resources import files
 
+import googleapiclient.discovery
 import numpy as np
 import pandas as pd
 import plaid
@@ -11,9 +9,6 @@ from plaid.model.country_code import CountryCode
 from plaid.model.institutions_get_by_id_request import InstitutionsGetByIdRequest
 from plaid.model.transactions_get_request import TransactionsGetRequest
 from plaid.model.transactions_get_request_options import TransactionsGetRequestOptions
-
-from gsheets_plaid.create_sheet import get_spreadsheet_id, gsheets_service
-from gsheets_plaid.initialization import CONFIG
 
 TRANSACTION_COLS = [
     'transaction_id',
@@ -47,38 +42,12 @@ ITEM_COLS = [
 ]
 
 
-def generate_plaid_client() -> plaid_api.PlaidApi:
-    if CONFIG.get('PLAID_ENV') == 'sandbox':
-        host = plaid.Environment.Sandbox
-        secret = CONFIG.get('PLAID_SECRET_SANDBOX')
-    elif CONFIG.get('PLAID_ENV') == 'development':
-        host = plaid.Environment.Development
-        secret = CONFIG.get('PLAID_SECRET_DEVELOPMENT')
-    elif CONFIG.get('PLAID_ENV') == 'production':
-        host = plaid.Environment.Production
-        secret = CONFIG.get('PLAID_SECRET_PRODUCTION')
-    else:
-        host = plaid.Environment.Sandbox
-        secret = CONFIG.get('PLAID_SECRET_SANDBOX')
-
-    plaid_config = plaid.Configuration(
-        host=host,
-        api_key={
-            'clientId': CONFIG.get('PLAID_CLIENT_ID'),
-            'secret': secret,
-            'plaidVersion': '2020-09-14',
-        }
-    )
-
-    api_client = plaid.ApiClient(plaid_config)
-    plaid_client = plaid_api.PlaidApi(api_client)
-    return plaid_client
-
-
-def get_transactions_from_plaid(access_token: str, num_days: int = 30) -> pd.DataFrame:
+def get_transactions_from_plaid(
+        plaid_client: plaid_api.PlaidApi,
+        access_token: str,
+        num_days: int = 30) -> pd.DataFrame:
     """Get transaction data from Plaid for a given access token.
     """
-    client = generate_plaid_client()
     start_date = (datetime.now() - timedelta(days=num_days))
     end_date = datetime.now()
     options = TransactionsGetRequestOptions(include_personal_finance_category=True)
@@ -88,7 +57,7 @@ def get_transactions_from_plaid(access_token: str, num_days: int = 30) -> pd.Dat
         end_date=end_date.date(),
         options=options
     )
-    transaction_response = client.transactions_get(transaction_request)
+    transaction_response = plaid_client.transactions_get(transaction_request)
     transactions = pd.DataFrame(transaction_response.to_dict().get('transactions'))[TRANSACTION_COLS]
     accounts = pd.DataFrame(transaction_response.to_dict().get('accounts'))[ACCOUNT_COLS]
     item = pd.Series(transaction_response.to_dict().get('item'))[ITEM_COLS]
@@ -96,7 +65,7 @@ def get_transactions_from_plaid(access_token: str, num_days: int = 30) -> pd.Dat
         institution_id=item.institution_id,
         country_codes=list(map(lambda x: CountryCode(x), ['US']))
     )
-    institution_response = client.institutions_get_by_id(institution_request)
+    institution_response = plaid_client.institutions_get_by_id(institution_request)
     institution = pd.Series(institution_response.to_dict().get('institution'))
 
     # Convert datetime to string
@@ -150,12 +119,15 @@ def get_transactions_from_plaid(access_token: str, num_days: int = 30) -> pd.Dat
     return transactions
 
 
-def get_transactions_from_gsheet() -> pd.DataFrame:
+def get_transactions_from_gsheet(
+        gsheets_service: googleapiclient.discovery.Resource,
+        spreadsheet_id: str,
+        spreadsheet_range: str = 'Sheet1') -> pd.DataFrame:
     """Get the transactions already saved to the Google Sheet.
     """
     result = gsheets_service.spreadsheets().values().get(
-        spreadsheetId=get_spreadsheet_id(verbose=True),
-        range='Sheet1',
+        spreadsheetId=spreadsheet_id,
+        range=spreadsheet_range,
     ).execute()
     rows = result.get('values', [])
     if not len(rows):
@@ -207,21 +179,28 @@ def merge_transactions(existing_transactions: pd.DataFrame, new_transactions: pd
     return result
 
 
-def fill_gsheet(transactions: pd.DataFrame):
+def fill_gsheet(
+        gsheets_service: googleapiclient.discovery.Resource,
+        spreadsheet_id: str,
+        transactions: pd.DataFrame,
+        spreadsheet_range: str = 'Sheet1') -> None:
     """Fill transaction data into Google Sheet.
     """
     headers = transactions.columns.tolist()
     values = transactions.fillna('').to_numpy().tolist()
     values.insert(0, headers)
     gsheets_service.spreadsheets().values().update(
-        spreadsheetId=get_spreadsheet_id(),
-        range='Sheet1',
+        spreadsheetId=spreadsheet_id,
+        range=spreadsheet_range,
         valueInputOption='USER_ENTERED',
         body={'values': values},
     ).execute()
 
 
-def apply_gsheet_formatting(transactions: pd.DataFrame):
+def apply_gsheet_formatting(
+        gsheets_service: googleapiclient.discovery.Resource,
+        spreadsheet_id: str,
+        transactions: pd.DataFrame):
     """Apply some formatting to the Google Sheet (datetime format, freeze
     header, etc.).
     """
@@ -275,48 +254,35 @@ def apply_gsheet_formatting(transactions: pd.DataFrame):
         freeze_header,
     ]
     gsheets_service.spreadsheets().batchUpdate(
-        spreadsheetId=get_spreadsheet_id(),
+        spreadsheetId=spreadsheet_id,
         body={'requests': requests},
     ).execute()
 
 
-def get_access_tokens() -> list[dict]:
-    """Load the access tokens from file.
-    """
-    token_pkg = 'gsheets_plaid.resources.db.tokens'
-    token_filename = CONFIG.get('PLAID_TOKENS_OUTPUT_FILENAME')
-    token_resource = files(token_pkg).joinpath(token_filename)
-    with open(token_resource, 'r') as file:
-        tokens = json.load(file)
-    env_str = CONFIG.get('PLAID_ENV', 'sandbox').lower()
-    tokens = [token for token in tokens if token['access_token'].startswith(f'access-{env_str}')]
-    return tokens
-
-
-def get_spreadsheet_url() -> str:
+def get_spreadsheet_url(
+        gsheets_service: googleapiclient.discovery.Resource,
+        spreadsheet_id: str) -> str:
     """Get the URL of the Google Sheet.
     """
-    response = gsheets_service.spreadsheets().get(spreadsheetId=get_spreadsheet_id()).execute()
+    response = gsheets_service.spreadsheets().get(spreadsheetId=spreadsheet_id).execute()
     return response.get('spreadsheetUrl')
 
 
-def sync_transactions(plaid_env: str = None, num_days: int = 30):
+def sync_transactions(
+        gsheets_service: googleapiclient.discovery.Resource,
+        plaid_client: plaid_api.PlaidApi,
+        access_tokens: list[str],
+        spreadsheet_id: str,
+        num_days: int = 30) -> None:
     """Put transaction data into Google Sheet.
     """
-    if plaid_env:
-        CONFIG['PLAID_ENV'] = plaid_env
-    result = get_transactions_from_gsheet()
-    for token in get_access_tokens():
+    transactions = get_transactions_from_gsheet(gsheets_service, spreadsheet_id)
+    for token in access_tokens:
         try:
-            new_transactions = get_transactions_from_plaid(token['access_token'], num_days)
-            result = merge_transactions(result, new_transactions)
+            new_transactions = get_transactions_from_plaid(plaid_client, token, num_days)
+            transactions = merge_transactions(transactions, new_transactions)
         except plaid.ApiException as e:
             print(e)
             continue
-    fill_gsheet(result)
-    apply_gsheet_formatting(result)
-    webbrowser.open(get_spreadsheet_url(), new=1, autoraise=True)
-
-
-if __name__ == '__main__':
-    sync_transactions()
+    fill_gsheet(gsheets_service, spreadsheet_id, transactions)
+    apply_gsheet_formatting(gsheets_service, spreadsheet_id, transactions)

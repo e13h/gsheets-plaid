@@ -1,6 +1,11 @@
 import argparse
 import sys
+import webbrowser
 
+from gsheets_plaid.data import (get_access_tokens, get_spreadsheet_id_from_file,
+                                load_creds_from_file)
+from gsheets_plaid.services import GOOGLE_SCOPES, generate_gsheets_service, generate_plaid_client
+from gsheets_plaid.sync import get_spreadsheet_url
 
 # Main parser
 description = 'Sync transaction data to Google Sheets using Plaid.'
@@ -38,16 +43,30 @@ if len(sys.argv) == 1:
 
 args = parser.parse_args()
 
-from gsheets_plaid.initialization import is_initialized
+from gsheets_plaid.initialization import CONFIG, is_initialized
+
 if not is_initialized() and args.action != 'init':
     parser.error('Please run "gsheets_plaid init" before running any other commands.')
+
+if args.env:
+    CONFIG['PLAID_ENV'] = args.env
 
 if args.action == 'init':
     from gsheets_plaid.initialization import initialize
     initialize()
 elif args.action == 'link':
     from gsheets_plaid.link import run_link_server
-    run_link_server(env=args.env)
+    run_link_server(CONFIG['PLAID_LINK_PORT'])
 elif args.action == 'sync':
     from gsheets_plaid.sync import sync_transactions
-    sync_transactions(plaid_env=args.env, num_days=args.days)
+    plaid_env = CONFIG.get('PLAID_ENV')
+    plaid_secret = CONFIG.get(f'PLAID_SECRET_{plaid_env.upper()}', None)
+    if not plaid_secret:
+        raise ValueError(f'Either {plaid_env} is incorrect or PLAID_SECRET_{plaid_env.upper()} does not exist!')
+    gsheets_credentials = load_creds_from_file(GOOGLE_SCOPES)
+    gsheets_service = generate_gsheets_service(gsheets_credentials)
+    plaid_client = generate_plaid_client(plaid_env, CONFIG.get('PLAID_CLIENT_ID'), plaid_secret)
+    access_tokens = get_access_tokens()
+    spreadsheet_id = get_spreadsheet_id_from_file(gsheets_service, verbose=True)
+    sync_transactions(gsheets_service, plaid_client, access_tokens, spreadsheet_id, args.days)
+    webbrowser.open(get_spreadsheet_url(gsheets_service, spreadsheet_id), new=1, autoraise=True)
