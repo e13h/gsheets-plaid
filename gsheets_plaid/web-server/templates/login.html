@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
+</head>
+
+<body>
+    <script>
+        function handleCredentialResponse(response) {
+            const new_url = `{{ url_for('sign_in_with_google_callback', jwt='${response.credential}')|unquote }}`;
+            window.location.replace(new_url);
+        }
+        window.onload = function () {
+            google.accounts.id.initialize({
+                client_id: "{{ client_id }}",
+                callback: handleCredentialResponse
+            });
+            google.accounts.id.renderButton(
+                document.getElementById("buttonDiv"),
+                { theme: "outline", size: "large" }  // customization attributes
+            );
+        }
+    </script>
+    <div id="buttonDiv"></div>
+</body>
+
+</html>

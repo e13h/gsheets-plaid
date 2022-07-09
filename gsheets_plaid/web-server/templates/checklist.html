@@ -1,0 +1,88 @@
+{% extends "index.html" %}
+
+{% block content %}
+
+<table>
+    <tr>
+        <td><u>Item</u></td>
+        <td><u>Status</u></td>
+        <td><u>Action</u></td>
+    </tr>
+    <tr>
+        <td>Google Sheets credentials</td>
+        <td align="center">
+            {% if google_creds_status %}
+                <i class="fa-solid fa-check" style="color: green"></i>
+            {% else %}
+                <i class="fa-solid fa-xmark" style="color: red"></i>
+            {% endif %}
+        </td>
+        <td><a href="{{ url_for('authorize_google_credentials') }}">{{ 'Reauthorize' if google_creds_status else 'Authorize' }}</a></td>
+    </tr>
+    <tr>
+        <td>Plaid credentials</td>
+        <td align="center">
+            {% if plaid_creds_status %}
+                <i class="fa-solid fa-check" style="color: green"></i>
+            {% else %}
+                <i class="fa-solid fa-xmark" style="color: red"></i>
+            {% endif %}
+        </td>
+        <td><a href="{{ url_for('edit_plaid_credentials') }}">Edit</a></td>
+    </tr>
+    <tr>
+        <td>Spreadsheet</td>
+        <td align="center">
+            {% if google_creds_status and spreadsheet_exists %}
+                <i class="fa-solid fa-check" style="color: green"></i>
+            {% else %}
+                <i class="fa-solid fa-xmark" style="color: red"></i>
+            {% endif %}
+        </td>
+        <td>
+            {% if google_creds_status and plaid_creds_status %}
+                <a href="{{ url_for('manage_spreadsheets') }}">{{ 'Manage' if spreadsheet_exists else 'Create new spreadsheet' }}</a>
+            {% else %}
+                Authorize Google and Plaid credentials first.
+            {% endif %}
+        </td>
+    </tr>
+    <tr>
+        <td>Plaid access tokens</td>
+        <td align="center">
+            {% if plaid_creds_status and plaid_access_tokens_status == True %}
+                <i class="fa-solid fa-check" style="color: green"></i>
+            {% elif plaid_creds_status and plaid_access_tokens_status == False %}
+                <i class="fa-solid fa-circle-exclamation" style="color: gold"></i>
+            {% else %}
+                <i class="fa-solid fa-xmark" style="color: red"></i>
+            {% endif %}
+        </td>
+        <td>
+            {% if plaid_creds_status %}
+                <a href="{{ url_for('manage_plaid_items') }}">Manage</a>
+            {% else %}
+                Authorize Plaid credentials first.
+            {% endif %}
+        </td>
+    </tr>
+</table>
+
+<br><br>
+{% if google_creds_status and plaid_creds_status and google_creds_status and spreadsheet_exists and plaid_access_tokens_status %}
+    <form action="{{ url_for('sync') }}" method="GET">
+        <select id="days" name="days">
+            <option value="7">7</option>
+            <option value="30" selected>30</option>
+            <option value="60">60</option>
+            <option value="90">90</option>
+            <option value="180">180</option>
+        </select>
+        <input type="submit" value="Sync transactions">
+    </form>
+{% endif %}
+<br><br>
+{% if spreadsheet_url %}
+    <a href="{{ spreadsheet_url }}" target="_blank">Open spreadsheet</a>
+{% endif %}
+{% endblock %}

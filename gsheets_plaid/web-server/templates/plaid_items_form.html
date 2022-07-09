@@ -1,0 +1,75 @@
+{% extends "index.html" %}
+
+{% block content %}
+
+<script src="https://cdn.plaid.com/link/v2/stable/link-initialize.js"></script>
+<script src="{{ url_for('static', filename='plaid_link.js') }}"></script>
+
+<br>
+
+<table>
+    <tr>
+        <td><u>Institution Name</u></td>
+        <td><u>Connection Status</u></td>
+    </tr>
+    {% for item in plaid_items %}
+        <tr>
+            <td>{{ item[0] }}</td>
+            <td align="center">
+                {% if item[1] == True %}
+                    <i class="fa-solid fa-check" style="color: green"></i>
+                {% elif item[1] == False %}
+                    <i class="fa-solid fa-circle-exclamation" style="color: gold"></i>
+                {% else %}
+                    <i class="fa-solid fa-xmark" style="color: red"></i>
+                {% endif %}
+            </td>
+            <td align="center">
+                <button type="button" id="update-account-{{ item[2] }}">Update Connection</button>
+                <script type="text/javascript">
+                    document.getElementById("update-account-{{ item[2] }}").addEventListener("click", (event) => {
+                        run_plaid_link("{{ item[2] }}");
+                    });
+                </script>
+            </td>
+        </tr>
+    {% endfor %}
+</table>
+
+<br>
+
+<button
+type="button"
+id="link-account"
+class="btn btn-primary btn-dark btn-lg"
+style="
+        border: 1px solid black;
+        border-radius: 5px;
+        background: black;
+        height: 48px;
+        width: 155px;
+        margin-top: 5; 
+        margin-left: 10;
+        color: white;
+        font-size: 18px;
+    "
+>
+<strong>Link account</strong>
+</button>
+
+<br><br>
+<a href="{{ url_for('index') }}">Home</a>
+
+<script type="text/javascript">
+    const linkToken = "{{ plaid_link_token }}";
+    const isOauthRedirect = ("{{ plaid_oauth_redirect }}".toLowerCase() === 'true');
+    const redirectUri = isOauthRedirect ? window.location.href : null;
+    
+    // Start Link when button is clicked
+    const linkAccountButton = document.getElementById("link-account");
+    linkAccountButton.addEventListener("click", (event) => {
+        run_plaid_link(linkToken, redirectUri);
+    });
+</script>
+
+{% endblock %}
