@@ -29,9 +29,14 @@ from plaid.model.products import Products
 TIMESTAMP_FORMAT = '%Y-%m-%dT%H:%M:%S'
 
 app = Flask(__name__)
-Flask.secret_key = os.environ.get('FLASK_SECRET_KEY')
-db = firestore.Client(project=os.environ.get('GOOGLE_CLOUD_PROJECT_ID'))
 plaid_client = None
+db = None
+
+@app.before_first_request
+def initialize_app():
+    global db
+    db = firestore.Client(project=os.environ.get('GOOGLE_CLOUD_PROJECT_ID'))
+    Flask.secret_key = os.environ.get('FLASK_SECRET_KEY')
 
 @app.route('/login')
 def login():
