@@ -218,8 +218,8 @@ def sync():
     plaid_env = session['user_settings']['plaid_env']
     spreadsheet_id = session['user_settings'][f'{plaid_env}_spreadsheet_id']
     sync_transactions(gsheets_service, plaid_client, plaid_access_tokens, spreadsheet_id, num_days)
-    push_current_user()
     log_user_sync()
+    push_current_user()
     return redirect(url_for('index'))
 
 def user_allowed_sync() -> bool:
