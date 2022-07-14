@@ -469,3 +469,6 @@ def revoke():
         return 'Credentials successfully revoked.'
     else:
         return 'An error occurred.'
+
+if __name__ == '__main__':
+    app.run(host='localhost', port=8080, debug=True, load_dotenv=True, ssl_context='adhoc')
