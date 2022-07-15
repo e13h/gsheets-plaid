@@ -4,7 +4,6 @@ from datetime import datetime, timedelta
 
 import google_auth_oauthlib.flow
 import googleapiclient.errors
-import requests
 from flask import Flask, redirect, render_template, request, session, url_for
 from google.auth.exceptions import RefreshError
 from google.auth.transport import requests
@@ -35,7 +34,7 @@ db = None
 @app.before_first_request
 def initialize_app():
     global db
-    db = firestore.Client(project=os.environ.get('GOOGLE_CLOUD_PROJECT_ID'))
+    db = firestore.Client()
     Flask.secret_key = os.environ.get('FLASK_SECRET_KEY')
 
 @app.route('/login')
@@ -470,5 +469,8 @@ def revoke():
     else:
         return 'An error occurred.'
 
+def run_web_server(host: str = 'localhost', port: int = 8080, debug: bool = False, **kwargs):
+    app.run(host=host, port=port, debug=debug, **kwargs)
+
 if __name__ == '__main__':
-    app.run(host='localhost', port=8080, debug=True, load_dotenv=True, ssl_context='adhoc')
+    run_web_server()
