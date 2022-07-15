@@ -1,3 +1,0 @@
-graft gsheets_plaid/resources
-exclude gsheets_plaid/resources/db/.env
-exclude gsheets_plaid/resources/db/tokens/*.json

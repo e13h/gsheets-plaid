@@ -1,0 +1,18 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <script src="https://kit.fontawesome.com/7d01cdaf13.js" crossorigin="anonymous"></script>
+</head>
+
+<body>
+    Hello {{ session['user_info']['given_name'] }}!
+    <br>
+    <a href="{{ url_for('sign_out') }}"">Sign Out</a>
+    <br><br>
+
+    {% block content %}
+    {% endblock %}
+</body>
+
+</html>

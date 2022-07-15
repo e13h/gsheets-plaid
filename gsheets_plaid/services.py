@@ -6,7 +6,12 @@ import plaid
 from google.oauth2.credentials import Credentials
 from plaid.api import plaid_api
 
-GOOGLE_SCOPES = ['https://www.googleapis.com/auth/drive.file']
+GOOGLE_SCOPES = [
+    'https://www.googleapis.com/auth/drive.file',
+    'openid',
+    'https://www.googleapis.com/auth/userinfo.profile',
+    'https://www.googleapis.com/auth/userinfo.email'
+]
 
 
 def generate_plaid_client(
