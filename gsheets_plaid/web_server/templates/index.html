@@ -6,7 +6,9 @@
 </head>
 
 <body>
-    Hello {{ session['user_info']['given_name'] }}!
+    {% if username %}
+        Hello {{ username }}!
+    {% endif %}
     <br>
     <a href="{{ url_for('sign_out') }}"">Sign Out</a>
     <br><br>
