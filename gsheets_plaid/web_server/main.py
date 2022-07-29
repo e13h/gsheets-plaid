@@ -39,6 +39,14 @@ else:
     session_manager = FlaskSessionManager(session)
     print('Using Flask session manager')
 
+@app.before_request
+def load_session():
+    if not session_manager.user_id:
+        user_id = request.cookies.get('user_id')
+        if not user_id:
+            return redirect(url_for('login'))
+        session_manager.register_user_id(user_id)
+
 @app.before_first_request
 def initialize_app():
     env_file = os.path.join(os.path.dirname(os.path.abspath(__file__)), '.env')
@@ -60,11 +68,6 @@ def login():
 @app.route('/')
 @app.route('/index')
 def index():
-    if not session_manager.user_id:
-        user_id = request.cookies.get('user_id')
-        if not user_id:
-            return redirect(url_for('login'))
-        session_manager.register_user_id(user_id)
     try:
         session_data = session_manager.get_session()
     except Exception:
