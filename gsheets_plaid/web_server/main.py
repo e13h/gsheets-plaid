@@ -41,6 +41,8 @@ else:
 
 @app.before_request
 def load_session():
+    if request.endpoint in ('login', 'sign_in_with_google_callback'):
+        return
     if not session_manager.user_id:
         user_id = request.cookies.get('user_id')
         if not user_id:
