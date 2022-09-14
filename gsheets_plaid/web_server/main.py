@@ -53,17 +53,19 @@ def load_session():
 
 @app.before_first_request
 def initialize_app():
-    env_file = os.path.join(os.path.dirname(os.path.abspath(__file__)), '.env')
-    if os.path.isfile(env_file):
-        load_dotenv()
-    elif os.environ.get('GOOGLE_CLOUD_PROJECT'):
+    required_env_variables = ('GOOGLE_CLOUD_CLIENT_ID', 'GOOGLE_CLOUD_CLIENT_CONFIG', 'FLASK_SECRET_KEY')
+    if os.environ.get('GOOGLE_CLOUD_PROJECT'):
         project_id = os.environ.get('GOOGLE_CLOUD_PROJECT')
         secrets_client = secretmanager.SecretManagerServiceClient()
         name = f'projects/{project_id}/secrets/app_engine_python_env/versions/latest'
         payload = secrets_client.access_secret_version(name=name).payload.data.decode('UTF-8')
         load_dotenv(stream=io.StringIO(payload))
     else:
-        raise Exception("No local .env or GOOGLE_CLOUD_PROJECT detected. No secrets found.")
+        # When running a web server not hosted in Google Cloud (eg. locally), we
+        # must authenticate with Google Cloud APIs.
+        required_env_variables += ('GOOGLE_APPLICATION_CREDENTIALS',)
+    if not all(env in os.environ for env in required_env_variables):
+        raise EnvironmentError(f"The following environment variables are required: {required_env_variables}")
 
 @app.route('/login')
 def login():
@@ -142,7 +144,7 @@ def unquote(url):
 @app.route('/authorize-google-credentials')
 def authorize_google_credentials():
     # Create flow instance to manage the OAuth 2.0 Authorization Grant Flow steps.
-    client_config = json.loads(os.environ.get('GOOGLE_CLOUD_CLIENT_CONFIG', {}))
+    client_config = parse_google_cloud_client_config()
     flow = google_auth_oauthlib.flow.Flow.from_client_config(client_config, GOOGLE_SCOPES)
 
     # The URI created here must exactly match one of the authorized redirect URIs
@@ -168,7 +170,7 @@ def google_oauth_callback():
     # Specify the state when creating the flow in the callback so that it can
     # verified in the authorization server response.
     state = request.cookies.get('google_oauth_state')
-    client_config = json.loads(os.environ.get('GOOGLE_CLOUD_CLIENT_CONFIG', {}))
+    client_config = parse_google_cloud_client_config()
     flow = google_auth_oauthlib.flow.Flow.from_client_config(client_config, GOOGLE_SCOPES, state=state)
     flow.redirect_uri = url_for('google_oauth_callback', _external=True)
 
@@ -300,6 +302,19 @@ def status_check(session_data: dict) -> dict:
         'spreadsheet_url': session_data.get(f'{plaid_env}_spreadsheet_url'),
     }
 
+def parse_google_cloud_client_config() -> dict:
+    env_variable = os.environ.get('GOOGLE_CLOUD_CLIENT_CONFIG')
+    if not env_variable:
+        raise EnvironmentError('Expected to find GOOGLE_CLOUD_CLIENT_CONFIG environment variable.')
+    if os.path.isfile(env_variable):
+        with open(env_variable, 'r') as file:
+            client_config = json.load(file)
+    else:
+        try:
+            client_config = json.loads(env_variable)
+        except json.JSONDecodeError:
+            raise ValueError('GOOGLE_CLOUD_CLIENT_CONFIG must be a valid filepath or valid JSON.')
+    return client_config
 
 def user_allowed_sync(session_data: dict) -> bool:
     last_sync = session_data.get('last_sync')

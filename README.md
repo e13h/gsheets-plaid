@@ -39,26 +39,42 @@ Here is a summary of how to create the credentials:
 3. Select "Desktop app"
 4. Type a name of your choice
 5. Click the download icon (when you hover it says "Download OAuth Client")
-6. Click "Download JSON"
+6. Save your Client ID for later, we will use it as the `GOOGLE_CLOUD_CLIENT_ID` environment variable
+7. Click "Download JSON"
 
+Later, we will use the OAuth credentials filepath as the `GOOGLE_CLOUD_CLIENT_CONFIG` environment variable.
+
+### Create a Google service account key
+Follow [this tutorial](https://cloud.google.com/iam/docs/creating-managing-service-account-keys#creating) for creating and downloading a service account key for the default compute service account in your Google Cloud project. Later, we will use the service account key filepath as the `GOOGLE_APPLICATION_CREDENTIALS` environment variable.
+
+**Note**: Service account keys are sensitive and should not be shared. See [this documentation](https://cloud.google.com/docs/authentication/application-default-credentials) for alternative authentication strategies.
 ### Create a Plaid Developer account
 Create a Plaid developer account [here](https://dashboard.plaid.com/signup).
 
-After you have created an account, go to Team Settings > Keys. You should see your `client_id`, as well as Development and Sandbox secrets.
+After you have created an account, go to Team Settings > Keys. You should see your `client_id`, as well as Development and Sandbox secrets. Have these keys ready to copy for later. Once you are able to get the local web server running, you will enter them there.
 
 #### Register the redirect URI in the Plaid Dashboard
 Add the redirect URI to the [list of allowed redirect URIs in the Plaid Dashboard](https://dashboard.plaid.com/team/api). By default, the redirect URI is `https://localhost:8080/google-oauth-callback`.
+
+### Generate a random string for cookie signing
+In order to use cookies in Flask, you **must** set the `FLASK_SECRET_KEY` environment variable or it won't work. Since this project isn't designed to be production-ready, you can use literally any string of text, or for best practice you can run some kind of cryptographic random generator.
+
+See [this documentation](https://flask.palletsprojects.com/en/2.2.x/quickstart/?highlight=secret%20key#sessions) for more information (including examples of how to quickly generate a cryptographically random secret key).
 
 ### Link a bank account
 We are finally getting to the exciting part!
 
 If everything is configured correctly, running the following command will open a new browser tab with a small local web server you can use to connect a bank account.
 ```shell
+GOOGLE_CLOUD_CLIENT_ID=your_google_cloud_client_id_here \
+GOOGLE_CLOUD_CLIENT_CONFIG=/path/to/oauth/client/credentials/file.json \
+GOOGLE_APPLICATION_CREDENTIALS=/path/to/service/account/key.json \
+FLASK_SECRET_KEY=super_secret_string \
 python3 -m gsheets_plaid
 ```
 If you are using the `sandbox` environment, note that the credentials are provided at the bottom of the screen. If you are using the `development` environment, use your actual bank account credentials. Note that you are only given 5 tokens to use in the development environment, but if you submit a ticket on Plaid Dashboard, you can get it bumped up to 100 tokens, which should be more than plenty for personal usage.
 
-Once you have added all the bank accounts you want, close the browser tab and enter `CTRL+C` in the terminal you started the `link` command in to kill the web server process.
+Once you have added all the bank accounts you want, close the browser tab and enter `CTRL+C` in the terminal to kill the web server process.
 
 That's it! Hopefully you're inspired to write some cool formulas and make neat charts using this raw transaction data.
 
