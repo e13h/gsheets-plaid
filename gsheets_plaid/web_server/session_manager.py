@@ -94,7 +94,6 @@ class FlaskSessionManager(SessionManager):
         if not self.user_id:
             raise ValueError('Call register_user_id() first.')
         self.session[self.user_id] = data
-        # self.session.modified = True
     
     def __getitem__(self, key: str) -> Any:
         return self.get_session()[key]
