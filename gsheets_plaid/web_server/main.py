@@ -25,6 +25,7 @@ from plaid.model.institutions_get_by_id_request import InstitutionsGetByIdReques
 from plaid.model.institutions_get_request import InstitutionsGetRequest
 from plaid.model.item_get_request import ItemGetRequest
 from plaid.model.item_public_token_exchange_request import ItemPublicTokenExchangeRequest
+from plaid.model.item_remove_request import ItemRemoveRequest
 from plaid.model.link_token_create_request import LinkTokenCreateRequest
 from plaid.model.link_token_create_request_user import LinkTokenCreateRequestUser
 from plaid.model.products import Products
@@ -274,6 +275,19 @@ def sync():
     sync_transactions(gsheets_service, plaid_client, plaid_access_tokens, spreadsheet_id, num_days)
     session_manager['last_sync'] = datetime.now().strftime(TIMESTAMP_FORMAT)
     return redirect(url_for('index'))
+
+@app.route('/remove-plaid-item')
+def remove_plaid_item():
+    token = request.args.get('access_token')
+    session_data = session_manager.get_session()
+    plaid_client = build_plaid_client(session_data)
+    item_id = (plaid_client.item_get(ItemGetRequest(token)))['item']['item_id']
+    plaid_request = ItemRemoveRequest(access_token=token)
+    plaid_client.item_remove(plaid_request)
+    del session_data['plaid_items'][item_id]
+    session_manager.set_session(session_data)
+    redirect_url = request.args.get('redirect_url', url_for('index'))
+    return redirect(redirect_url)
 
 def status_check(session_data: dict) -> dict:
     plaid_env = session_data.get('plaid_env', 'sandbox')

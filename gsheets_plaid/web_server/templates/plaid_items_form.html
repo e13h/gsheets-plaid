@@ -35,6 +35,14 @@
                     });
                 </script>
             </td>
+            <td align="center">
+                <button type="button" id="remove-item-{{ item[4] }}" {{ 'disabled' if plaid_env != item[1] }}>Remove Connection</button>
+                <script type="text/javascript">
+                    document.getElementById("remove-item-{{ item[4] }}").addEventListener("click", (event) => {
+                        location.href = "{{ url_for('remove_plaid_item', access_token=item[4], redirect_url=url_for('manage_plaid_items')) | safe }}"
+                    })
+                </script>
+            </td>
         </tr>
     {% endfor %}
 </table>
