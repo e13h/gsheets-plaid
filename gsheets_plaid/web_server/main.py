@@ -483,4 +483,4 @@ def run_web_server(host: str = 'localhost', port: int = 8080, debug: bool = Fals
     app.run(host=host, port=port, debug=debug, load_dotenv=False, **kwargs)
 
 if __name__ == '__main__':
-    run_web_server()
+    run_web_server(debug=True, ssl_context='adhoc')
