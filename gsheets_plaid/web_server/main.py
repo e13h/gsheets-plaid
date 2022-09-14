@@ -1,6 +1,7 @@
 import io
 import json
 import os
+import re
 from datetime import datetime, timedelta
 
 import google_auth_oauthlib.flow
@@ -222,10 +223,11 @@ def manage_plaid_items():
         <br><br>
         <a href={url_for('index')}>Back to home</a>
         """
-    access_tokens = get_plaid_items(session_data).values()
+    access_tokens = get_plaid_items(session_data, remove_inactive_items=False).values()
     item_info = get_plaid_item_info(access_tokens, session_data)
+    plaid_env = session_data.get('plaid_env', 'sandbox')
     resp = make_response(render_template('plaid_items_form.html', plaid_link_token=link_token,
-        plaid_oauth_redirect=False, plaid_items=item_info))
+        plaid_oauth_redirect=False, plaid_items=item_info, plaid_env=plaid_env))
     resp.set_cookie('plaid_link_token', link_token, httponly=True)
     return resp
 
@@ -317,10 +319,12 @@ def validate_plaid_access_tokens(plaid_items: dict, session_data: dict) -> bool:
             return False
     return True
 
-def get_plaid_items(session_data: dict) -> dict:
+def get_plaid_items(session_data: dict, remove_inactive_items: bool = True) -> dict:
     plaid_env = session_data.get('plaid_env', 'sandbox')
     plaid_items = session_data.get('plaid_items', {})
-    return {k: v for k, v in plaid_items.items() if v.lower().startswith(f'access-{plaid_env}')}
+    if remove_inactive_items:
+        return {k: v for k, v in plaid_items.items() if v.lower().startswith(f'access-{plaid_env}')}
+    return plaid_items
 
 def lookup_spreadsheet_name_for_env(
         plaid_env: str,
@@ -423,12 +427,23 @@ def get_plaid_item_info(access_tokens: list, session_data: dict) -> tuple:
         try:
             response = plaid_client.item_get(ItemGetRequest(token))
             ins_id = response['item']['institution_id']
+            healthy_state = response['item']['error'] == None
             ins_request = InstitutionsGetByIdRequest(ins_id, [CountryCode('US')])
             response = plaid_client.institutions_get_by_id(ins_request)
+            ins_name = response['institution']['name']
             link_update_token = request_link_update_token(plaid_client, token, session_data)
-            results.append((response['institution']['name'], True, link_update_token))
+            token_env = re.findall(r"access-(\w+)-.*", token)[0]
         except PlaidApiException as e:
-            raise e
+            error_code = json.loads(e.body)['error_code']
+            if error_code == 'INVALID_ACCESS_TOKEN':
+                token_env_regex = re.findall(r"access-(\w+)-.*", token)
+                token_env = token_env_regex[0] if token_env_regex else 'unknown'
+                ins_name = f'{token_env} institution'
+                healthy_state = None
+                link_update_token = None
+            else:
+                raise e
+        results.append((ins_name, token_env, healthy_state, link_update_token, token))
     return results
 
 @app.route('/revoke-google-credentials')
