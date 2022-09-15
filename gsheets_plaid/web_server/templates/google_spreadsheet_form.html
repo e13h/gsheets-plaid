@@ -3,39 +3,15 @@
 {% block content %}
 
 <form action="{{ url_for('manage_spreadsheets') }}" method="POST">
-    <table>
-        <tr>
-            <td></td>
-            <td align="center"><u>Sandbox</u></td>
-            <td align="center"><u>Development</u></td>
-            <td align="center"><u>Production</u></td>
-        </tr>
-        <tr>
-            <td align="right">Current environment</td>
-            <td align="center">
-                <input type="radio" name="plaid_env" id="sandbox" value="sandbox" disabled {{ 'checked' if plaid_env == 'sandbox' }}>
-            </td>
-            <td align="center">
-                <input type="radio" name="plaid_env" id="development" value="development" disabled {{ 'checked' if plaid_env == 'development' }}>
-            </td>
-            <td align="center">
-                <input type="radio" name="plaid_env" id="production" value="production" disabled {{ 'checked' if plaid_env == 'production' }}>
-            </td>
-        </tr>
-        <tr>
-            <td align="right">Spreadsheet name</td>
-            <td align="center">
-                <input type="text" name="sandbox_spreadsheet_name" placeholder="Sandbox spreadsheet name" size="25" {{ 'disabled' if sandbox_spreadsheet_name }} value="{{ sandbox_spreadsheet_name }}"><br>
-            </td>
-            <td align="center">
-                <input type="text" name="development_spreadsheet_name" placeholder="Development spreadsheet name" size="25" {{ 'disabled' if development_spreadsheet_name }} value="{{ development_spreadsheet_name }}"><br>
-            </td>
-            <td align="center">
-                <input type="text" name="production_spreadsheet_name" placeholder="Production spreadsheet name" size="25" {{ 'disabled' if production_spreadsheet_name }} value="{{ production_spreadsheet_name }}"><br>
-            </td>
-        </tr>
-    </table>
-    <input type="submit" value="Submit">
+    <label for="spreadsheet_name">Spreadsheet Name:</label>
+    <input type="text" name="spreadsheet_name" placeholder="Name" size="25" {{ 'disabled' if spreadsheet_name }} value="{{ spreadsheet_name }}"><br>
+    <input type="submit" value="Create" {{ 'disabled' if spreadsheet_name }}>
 </form>
+<button type="button" id="forget-spreadsheet" {{ 'disabled' if not spreadsheet_name }}>Forget</button><br>
+<script type="text/javascript">
+    document.getElementById("forget-spreadsheet").addEventListener("click", (event) => {
+        location.href = "{{ url_for('forget_spreadsheet', redirect_url=url_for('manage_spreadsheets')) | safe }}"
+    });
+</script>
 
 {% endblock %}

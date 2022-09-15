@@ -109,25 +109,21 @@ def sign_out():
 def edit_plaid_credentials():
     session_data = session_manager.get_session()
     if request.method == 'GET':
+        plaid_env = session_data.get('plaid_env')
         plaid_client_id = session_data.get('plaid_client_id', '')
-        plaid_secret_sandbox = session_data.get('plaid_secret_sandbox', '')
-        plaid_secret_development = session_data.get('plaid_secret_development', '')
-        plaid_secret_production = session_data.get('plaid_secret_production', '')
+        plaid_secret = session_data.get('plaid_secret', '')
+        plaid_creds_valid = validate_plaid_credentials(plaid_env, plaid_client_id, plaid_secret)
         return render_template('plaid_credentials_form.html',
-            plaid_env=session_data.get('plaid_env'),
+            plaid_env=plaid_env,
             plaid_client_id=plaid_client_id,
-            plaid_secret_sandbox=plaid_secret_sandbox,
-            plaid_secret_development=plaid_secret_development,
-            plaid_secret_production=plaid_secret_production,
-            plaid_sandbox_creds_valid=validate_plaid_credentials('sandbox', plaid_client_id, plaid_secret_sandbox),
-            plaid_development_creds_valid=validate_plaid_credentials('development', plaid_client_id, plaid_secret_development),
-            plaid_production_creds_valid=validate_plaid_credentials('production', plaid_client_id, plaid_secret_production))
+            plaid_secret=plaid_secret,
+            plaid_creds_valid=plaid_creds_valid)
     elif request.method == 'POST':
-        session_data['plaid_env'] = request.form['plaid_env']
-        session_data['plaid_client_id'] = request.form['plaid_client_id']
-        session_data['plaid_secret_sandbox'] = request.form['plaid_secret_sandbox']
-        session_data['plaid_secret_development'] = request.form['plaid_secret_development']
-        session_data['plaid_secret_production'] = request.form['plaid_secret_production']
+        client_id = request.form['plaid_client_id']
+        secret = request.form['plaid_secret']
+        session_data['plaid_env'] = determine_plaid_env(client_id, secret)
+        session_data['plaid_client_id'] = client_id
+        session_data['plaid_secret'] = secret
         session_manager.set_session(session_data)
         global plaid_client
         plaid_client = None
@@ -196,19 +192,14 @@ def manage_spreadsheets():
         return redirect(url_for('authorize_google_credentials'))
     if request.method == 'GET':
         return render_template('google_spreadsheet_form.html',
-            plaid_env=session_data.get('plaid_env'),
-            sandbox_spreadsheet_name=lookup_spreadsheet_name_for_env('sandbox', gsheets_service, session_data),
-            development_spreadsheet_name=lookup_spreadsheet_name_for_env('development', gsheets_service, session_data),
-            production_spreadsheet_name=lookup_spreadsheet_name_for_env('production', gsheets_service, session_data),
-            )
+            spreadsheet_name=lookup_spreadsheet_name(gsheets_service, session_data))
     elif request.method == 'POST':
-        for plaid_env in ('sandbox', 'development', 'production'):
-            title = request.form.get(f'{plaid_env}_spreadsheet_name')
-            if title:
-                spreadsheet_id = create_new_spreadsheet(gsheets_service, title)
-                session_data[f'{plaid_env}_spreadsheet_id'] = spreadsheet_id
-                session_data[f'{plaid_env}_spreadsheet_url'] = get_spreadsheet_url(gsheets_service, spreadsheet_id)
-        session_manager.set_session(session_data)
+        title = request.form.get(f'spreadsheet_name')
+        if title:
+            spreadsheet_id = create_new_spreadsheet(gsheets_service, title)
+            session_data[f'spreadsheet_id'] = spreadsheet_id
+            session_data[f'spreadsheet_url'] = get_spreadsheet_url(gsheets_service, spreadsheet_id)
+            session_manager.set_session(session_data)
         return redirect(url_for('manage_spreadsheets'))
     else:
         raise ValueError('Invalid request method')
@@ -272,8 +263,7 @@ def sync():
         return redirect(url_for('authorize_google_credentials'))
     plaid_client = build_plaid_client(session_data)
     plaid_access_tokens = get_plaid_items(session_data).values()
-    plaid_env = session_data.get('plaid_env', 'sandbox')
-    spreadsheet_id = session_data.get(f'{plaid_env}_spreadsheet_id')
+    spreadsheet_id = session_data.get(f'spreadsheet_id')
     sync_transactions(gsheets_service, plaid_client, plaid_access_tokens, spreadsheet_id, num_days)
     session_manager['last_sync'] = datetime.now().strftime(TIMESTAMP_FORMAT)
     return redirect(url_for('index'))
@@ -291,15 +281,22 @@ def remove_plaid_item():
     redirect_url = request.args.get('redirect_url', url_for('index'))
     return redirect(redirect_url)
 
+@app.route('/forget-spreadsheet')
+def forget_spreadsheet() -> None:
+    del session_manager['spreadsheet_id']
+    del session_manager['spreadsheet_url']
+    redirect_url = request.args.get('redirect_url', url_for('index'))
+    return redirect(redirect_url)
+
 def status_check(session_data: dict) -> dict:
     plaid_env = session_data.get('plaid_env', 'sandbox')
     plaid_items = get_plaid_items(session_data)
     return {
         'google_creds_status': 'google_credentials' in session_data,
-        'spreadsheet_exists': f'{plaid_env}_spreadsheet_id' in session_data and f'{plaid_env}_spreadsheet_url' in session_data,
-        'plaid_creds_status': validate_plaid_credentials(plaid_env, session_data.get('plaid_client_id'), session_data.get(f'plaid_secret_{plaid_env}')),
+        'spreadsheet_exists': f'spreadsheet_id' in session_data and f'spreadsheet_url' in session_data,
+        'plaid_creds_status': validate_plaid_credentials(plaid_env, session_data.get('plaid_client_id'), session_data.get(f'plaid_secret')),
         'plaid_access_tokens_status': validate_plaid_access_tokens(plaid_items, session_data),
-        'spreadsheet_url': session_data.get(f'{plaid_env}_spreadsheet_url'),
+        'spreadsheet_url': session_data.get(f'spreadsheet_url'),
     }
 
 def parse_google_cloud_client_config() -> dict:
@@ -325,6 +322,12 @@ def user_allowed_sync(session_data: dict) -> bool:
     if last_sync + interval < datetime.now():
         return True
     return False
+
+def determine_plaid_env(client_id: str, secret: str) -> str:
+    for env in ('sandbox', 'development', 'production'):
+        if validate_plaid_credentials(env, client_id, secret):
+            return env
+    return None
 
 def validate_plaid_credentials(plaid_env: str, client_id: str, secret: str) -> bool:
     if not all([plaid_env, client_id, secret]):
@@ -355,20 +358,17 @@ def get_plaid_items(session_data: dict, remove_inactive_items: bool = True) -> d
         return {k: v for k, v in plaid_items.items() if v.lower().startswith(f'access-{plaid_env}')}
     return plaid_items
 
-def lookup_spreadsheet_name_for_env(
-        plaid_env: str,
+def lookup_spreadsheet_name(
         gsheets_service: googleapiclient.discovery.Resource,
         session_data: dict) -> str:
-    if plaid_env not in ('sandbox', 'development', 'production'):
-        raise ValueError(plaid_env)
-    spreadsheet_id = session_data.get(f'{plaid_env}_spreadsheet_id')
+    spreadsheet_id = session_data.get(f'spreadsheet_id')
     if not spreadsheet_id:
         return ''
     try:
         result = gsheets_service.spreadsheets().get(spreadsheetId=spreadsheet_id).execute()
         return result['properties']['title']
     except googleapiclient.errors.HttpError:
-        del session_manager[f'{plaid_env}_spreadsheet_id']
+        forget_spreadsheet()
         return ''
 
 def build_gsheets_service(google_credentials: dict) -> googleapiclient.discovery.Resource:
@@ -435,7 +435,7 @@ def build_plaid_client(session_data: dict) -> plaid_api.PlaidApi:
     if plaid_env not in ('sandbox', 'development', 'production'):
         raise ValueError(plaid_env)
     plaid_client_id = session_data.get('plaid_client_id')
-    plaid_secret = session_data.get(f'plaid_secret_{plaid_env}')
+    plaid_secret = session_data.get(f'plaid_secret')
     if not validate_plaid_credentials(plaid_env, plaid_client_id, plaid_secret):
         raise ValueError('Invalid Plaid credentials')
     plaid_client = generate_plaid_client(plaid_env, plaid_client_id, plaid_secret)
