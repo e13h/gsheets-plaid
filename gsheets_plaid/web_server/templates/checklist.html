@@ -78,10 +78,13 @@
             <option value="90">90 days</option>
             <option value="180">180 days</option>
         </select>
-        <input type="submit" value="Sync transactions">
+        <input type="submit" value="Sync transactions" {{ 'disabled' if not user_allowed_sync }}>
     </form>
+    {% if not user_allowed_sync %}
+        <p>You may not sync more than once every 12 hours.</p>
+    {% endif %}
+    <br>
 {% endif %}
-<br><br>
 {% if spreadsheet_url %}
     <button type="button" id="open-spreadsheet">Open spreadsheet</button>
     <script type="text/javascript">

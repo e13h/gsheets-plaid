@@ -297,6 +297,7 @@ def status_check(session_data: dict) -> dict:
         'plaid_creds_status': validate_plaid_credentials(plaid_env, session_data.get('plaid_client_id'), session_data.get(f'plaid_secret')),
         'plaid_access_tokens_status': validate_plaid_access_tokens(plaid_items, session_data),
         'spreadsheet_url': session_data.get(f'spreadsheet_url'),
+        'user_allowed_sync': user_allowed_sync(session_data),
     }
 
 def parse_google_cloud_client_config() -> dict:
