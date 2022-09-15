@@ -70,7 +70,6 @@ style="
 </button>
 
 <br><br>
-<a href="{{ url_for('index') }}">Home</a>
 
 <script type="text/javascript">
     const linkToken = "{{ plaid_link_token }}";
@@ -78,8 +77,7 @@ style="
     const redirectUri = isOauthRedirect ? window.location.href : null;
     
     // Start Link when button is clicked
-    const linkAccountButton = document.getElementById("link-account");
-    linkAccountButton.addEventListener("click", (event) => {
+    document.getElementById("link-account").addEventListener("click", (event) => {
         run_plaid_link(linkToken, redirectUri);
     });
 </script>

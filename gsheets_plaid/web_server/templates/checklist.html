@@ -83,6 +83,11 @@
 {% endif %}
 <br><br>
 {% if spreadsheet_url %}
-    <a href="{{ spreadsheet_url }}" target="_blank">Open spreadsheet</a>
+    <button type="button" id="open-spreadsheet">Open spreadsheet</button>
+    <script type="text/javascript">
+        document.getElementById("open-spreadsheet").addEventListener("click", (event) => {
+            window.open("{{ spreadsheet_url }}", "_blank");
+        });
+    </script>
 {% endif %}
 {% endblock %}

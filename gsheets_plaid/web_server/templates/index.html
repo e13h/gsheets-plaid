@@ -9,8 +9,16 @@
     {% if username %}
         Hello {{ username }}!
     {% endif %}
-    <br>
-    <a href="{{ url_for('sign_out') }}"">Sign Out</a>
+    <button type="button" id="sign-out">Sign Out</button>
+    <button type="Home" id="home">Home</button>
+    <script type="text/javascript">
+        document.getElementById("sign-out").addEventListener("click", (event) => {
+            location.href = "{{ url_for('sign_out') | safe }}"
+        });
+        document.getElementById("home").addEventListener("click", (event) => {
+            location.href = "{{ url_for('index') | safe }}"
+        });
+    </script>
     <br><br>
 
     {% block content %}
