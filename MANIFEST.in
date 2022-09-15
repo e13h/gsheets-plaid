@@ -1,0 +1,2 @@
+recursive-include gsheets_plaid/web_server/templates *.html
+recursive-include gsheets_plaid/web_server/static *.js
