@@ -353,7 +353,10 @@ def validate_plaid_credentials(plaid_env: str, client_id: str, secret: str) -> b
 def validate_plaid_access_tokens(plaid_items: dict, session_data: dict) -> bool:
     if len(plaid_items) == 0:
         return None
-    plaid_client = build_plaid_client(session_data)
+    try:
+        plaid_client = build_plaid_client(session_data)
+    except ValueError:
+        return False
     for access_token in plaid_items.values():
         try:
             plaid_client.item_get(ItemGetRequest(access_token))
