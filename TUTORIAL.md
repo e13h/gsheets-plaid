@@ -3,10 +3,11 @@ Follow this guide to get the GSheets-Plaid web server running on your local mach
 
 Prerequisites:
   * A Google account
+  * A [Plaid](https://dashboard.plaid.com/signup) account
   * Python 3.10 or higher
   * `gsheets-plaid` installed
     ```
-    pip install gsheets-plaid
+    python3 -m pip install gsheets-plaid
     ```
 
 ## Create a new Google Cloud Project
@@ -136,8 +137,21 @@ FLASK_SECRET_KEY=f15e697ad4c9480c385867699152a52ba8a70ee0f70382999989d7924ae23f7
 python3 -m gsheets_plaid
 ```
 
+## Register the Plaid redirect URI
+If you haven't signed up already, [create a Plaid developer account](https://dashboard.plaid.com/signup).
+
+Add the redirect URI `https://localhost:8080/google-oauth-callback` to the [list of allowed redirect URIs in the Plaid Dashboard](https://dashboard.plaid.com/team/api) (**Team Settings** > **API** > **Allowed redirect URIs** > **Configure**).
+
 ## Spin up the web server
 Now we can run the web server script.
 ```
 ./run_web_server.sh
 ```
+Once you sign in with your email that you whitelisted as a test user, you should see a checklist of items to complete before syncing your transactions.
+
+Some things to note:
+ * When adding bank accounts, if you are using the `sandbox` environment, note that the bank account credentials are provided at the bottom of the screen. If you are using the `development` environment, use your actual bank account credentials.
+ * In the `development` environment, you are only given 5 tokens to use. If you submit a ticket on the Plaid Dashboard you can get it bumped up to 100 tokens, which should be more than plenty for personal usage.
+ * Once you have added all the bank accounts you want you can close the browser tab and enter `CTRL+C` in the terminal to kill the web server process.
+
+That's it! 🎉 Hopefully you're inspired to write some cool formulas and make neat charts using this raw transaction data.
