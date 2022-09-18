@@ -1,6 +1,9 @@
 instance_class: F2
 runtime: python310
 
+env_variables:
+  GSHEETS_PLAID_RESTRICTIONS_ENABLED: 1
+
 handlers:
 - url: /static
   static_dir: static

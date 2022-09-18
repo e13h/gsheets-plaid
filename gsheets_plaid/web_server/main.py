@@ -40,6 +40,7 @@ if os.environ.get('GOOGLE_CLOUD_PROJECT'):
 else:
     session_manager = FlaskSessionManager(session)
     print('Using Flask session manager')
+enable_restrictions = bool(os.environ.get('GSHEETS_PLAID_RESTRICTIONS_ENABLED'))
 
 @app.before_request
 def load_session():
@@ -321,6 +322,8 @@ def parse_google_cloud_client_config() -> dict:
     return client_config
 
 def user_allowed_sync(session_data: dict) -> bool:
+    if not enable_restrictions:
+        return True
     last_sync = session_data.get('last_sync')
     if not last_sync:
         return True
