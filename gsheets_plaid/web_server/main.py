@@ -43,7 +43,7 @@ else:
 
 @app.before_request
 def load_session():
-    if request.endpoint in ('login', 'sign_in_with_google_callback'):
+    if request.endpoint in ('login', 'sign_in_with_google_callback', 'sign_out'):
         return
     if not session_manager.user_id:
         user_id = request.cookies.get('user_id')
@@ -282,11 +282,17 @@ def remove_plaid_item():
     return redirect(redirect_url)
 
 @app.route('/forget-spreadsheet')
-def forget_spreadsheet() -> None:
+def forget_spreadsheet():
     del session_manager['spreadsheet_id']
     del session_manager['spreadsheet_url']
     redirect_url = request.args.get('redirect_url', url_for('index'))
     return redirect(redirect_url)
+
+@app.route('/delete-my-data')
+def delete_my_data():
+    request.cookies
+    session_manager.delete_session()
+    return redirect(url_for('sign_out'))
 
 def status_check(session_data: dict) -> dict:
     plaid_env = session_data.get('plaid_env', 'sandbox')

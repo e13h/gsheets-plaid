@@ -10,13 +10,20 @@
         Hello {{ username }}!
     {% endif %}
     <button type="button" id="sign-out">Sign Out</button>
-    <button type="Home" id="home">Home</button>
+    <button type="button" id="home">Home</button>
+    <button type="button" id="delete-account" style="margin-left: 50px;">Delete my data</button>
     <script type="text/javascript">
         document.getElementById("sign-out").addEventListener("click", (event) => {
-            location.href = "{{ url_for('sign_out') | safe }}"
+            location.href = "{{ url_for('sign_out') | safe }}";
         });
         document.getElementById("home").addEventListener("click", (event) => {
-            location.href = "{{ url_for('index') | safe }}"
+            location.href = "{{ url_for('index') | safe }}";
+        });
+        document.getElementById("delete-account").addEventListener("click", (event) => {
+            message = "Are you sure you want to delete your data and sign out?\nThis action is IRREVERSIBLE!";
+            if (window.confirm(message)) {
+                location.href = "{{ url_for('delete_my_data') | safe }}";
+            }
         });
     </script>
     <br><br>

@@ -22,6 +22,10 @@ class SessionManager(ABC):
     @abstractmethod
     def set_session(self, data: dict) -> None:
         raise NotImplementedError()
+    
+    @abstractmethod
+    def delete_session(self) -> None:
+        raise NotImplementedError()
 
     @abstractmethod
     def __getitem__(self, key: str) -> Any:
@@ -64,6 +68,11 @@ class FirestoreSessionManager(SessionManager):
             raise ValueError('Call register_user_id() first.')
         self.doc_ref.set(data)
     
+    def delete_session(self) -> None:
+        self.doc_ref.delete()
+        self.doc_ref = None
+        self.user_id = None
+
     def __getitem__(self, key: str) -> Any:
         return self.get_session()[key]
     
@@ -94,7 +103,11 @@ class FlaskSessionManager(SessionManager):
         if not self.user_id:
             raise ValueError('Call register_user_id() first.')
         self.session[self.user_id] = data
-    
+
+    def delete_session(self) -> None:
+        del self.session[self.user_id]
+        self.user_id = None
+
     def __getitem__(self, key: str) -> Any:
         return self.get_session()[key]
     
