@@ -3,7 +3,7 @@ A spring break project to get my bank transaction data in Google Sheets without 
 
 `gsheets-plaid` is a tool for getting your raw bank transaction data into a Google Sheets spreadsheet, to enable you to make your own formulas and charts for tracking spending, making goals, etc. This app is 100% free (assuming you don't already have a bunch of Google Cloud projects), but there is a bit of one-time setting up to do to get your Google and Plaid credentials in place.
 
-The [`TUTORIAL`](TUTORIAL.md) contains all the instructions to get you from a fresh install of the package to bank transactions in a Google Sheets file.
+The [`TUTORIAL`](https://github.com/evanphilipsmith/gsheets-plaid/blob/main/TUTORIAL.md) contains all the instructions to get you from a fresh install of the package to bank transactions in a Google Sheets file.
 
 Please open an issue if something isn't working or if the documentation isn't clear.
 
