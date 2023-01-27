@@ -65,6 +65,7 @@ def initialize_app():
         # When running a web server not hosted in Google Cloud (eg. locally), we
         # must authenticate with Google Cloud APIs.
         required_env_variables += ('GOOGLE_APPLICATION_CREDENTIALS',)
+        load_dotenv()
     if not all(env in os.environ for env in required_env_variables):
         raise EnvironmentError(f"The following environment variables are required: {required_env_variables}")
 
