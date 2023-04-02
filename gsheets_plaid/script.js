@@ -45,7 +45,7 @@ function onEdit(e) {
     if (rg.getSheet().getName() === "Sheet1"
         && rg.getNumRows() === 1
         && rg.getNumColumns() === 1
-        && rg.getColumn() === 7
+        && rg.getColumn() === SPLIT_COL
         && rg.isChecked()
         && !rg.getSheet().getRange(rg.getRow(), TRANSACTION_ID_COL).isBlank()) {
 
