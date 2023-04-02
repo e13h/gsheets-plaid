@@ -49,8 +49,8 @@ function onEdit(e) {
         && rg.isChecked()
         && !rg.getSheet().getRange(rg.getRow(), TRANSACTION_ID_COL).isBlank()) {
 
-        splitTransaction(sheetName = rg.getSheet(), row = rg.getRow());
         rg.uncheck();
+        splitTransaction(sheetName = rg.getSheet(), row = rg.getRow());
     }
     SHEET.getRange(2, SPLIT_COL, SHEET.getMaxRows()).uncheck();
 }
