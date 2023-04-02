@@ -10,26 +10,36 @@ function splitTransaction(sheet, row) {
     // Remove subscript (if any)
     transaction_id = transaction_id.split('-')[0];
 
-    // Find index of last sub-row
-    const sub_rows = sheet.getRange(1, 1, sheet.getLastRow()).createTextFinder(transaction_id).findAll();
-    const last_sub_row = Math.max(...sub_rows.map((r) => { return r.getLastRow() }));
-    const num_sub_rows = sub_rows.length;
+    // Find index of last row in the transaction group
+    const row_group = sheet.getRange(1, 1, sheet.getLastRow()).createTextFinder(transaction_id).findAll();
+    const insert_loc = Math.max(...row_group.map((r) => { return r.getLastRow() }));
+    const num_child_rows = row_group.length - 1;
 
     // Insert new row
-    sheet.insertRowAfter(last_sub_row);
-    const new_transaction_row = last_sub_row + 1;
+    if (num_child_rows === 0) {
+        sheet.insertRowsAfter(insert_loc, 2);
+        fillChildTransactionData(sheet, row, insert_loc + 1, transaction_id, num_child_rows + 1);
+        fillChildTransactionData(sheet, row, insert_loc + 2, transaction_id, num_child_rows + 2);
+    } else {
+        sheet.insertRowAfter(insert_loc);
+        fillChildTransactionData(sheet, row, insert_loc + 1, transaction_id, num_child_rows + 1);
+    }
 
+    // TODO: add conditional formatting to amount cells based on total amount.
+}
+
+function fillChildTransactionData(sheet, source_row, dest_row, transaction_id, suffix) {
     // Copy the previous transaction
-    const source_range = sheet.getRange(row, 1, 1, sheet.getMaxColumns());
-    const destination_range = sheet.getRange(new_transaction_row, 1, 1, sheet.getMaxColumns());
-    source_range.copyTo(destination_range);
-
-    // Modify the transaction ID (append num_sub_rows + 1)
-    const new_transaction_id = `${transaction_id}-${num_sub_rows}`;
-    sheet.getRange(new_transaction_row, TRANSACTION_ID_COL).setValue(new_transaction_id);
-
+    const source_range = sheet.getRange(source_row, 1, 1, sheet.getMaxColumns());
+    const dest_range = sheet.getRange(dest_row, 1, 1, sheet.getMaxColumns());
+    source_range.copyTo(dest_range);
+    
+    // Modify the transaction ID (append num_child_rows + 1)
+    const new_transaction_id = `${transaction_id}-${suffix}`;
+    sheet.getRange(dest_row, TRANSACTION_ID_COL).setValue(new_transaction_id);
+    
     // Clear the amount
-    sheet.getRange(new_transaction_row, AMOUNT_COL).clearContent();
+    sheet.getRange(dest_row, AMOUNT_COL).clearContent();
 }
 
 function getColumnIndexByName(columnName, sheet = null) {
