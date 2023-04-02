@@ -155,8 +155,7 @@ def get_transactions_from_gsheet(
 def merge_transactions(existing_transactions: pd.DataFrame, new_transactions: pd.DataFrame) -> pd.DataFrame:
     """Merge new transactions with existing transactions.
     """
-    num_preexisting_rows = len(existing_transactions)
-    if not num_preexisting_rows:
+    if not len(existing_transactions):
         return new_transactions
 
     # Drop pending transactions that share the same item_id as new_transactions
@@ -180,12 +179,6 @@ def merge_transactions(existing_transactions: pd.DataFrame, new_transactions: pd
         inplace=True,
         ignore_index=True)
 
-    # Add (num_preexisting_rows - num_result_rows) blank rows to the result
-    num_blank_rows = num_preexisting_rows - len(result)
-    if num_blank_rows > 0:
-        blank_rows = pd.DataFrame([[np.nan] * len(result.columns)] * num_blank_rows, columns=result.columns)
-        result = pd.concat((result, blank_rows), axis=0)
-    
     result.fillna('', inplace=True)
     return result
 
