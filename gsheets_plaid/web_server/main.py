@@ -14,7 +14,7 @@ from google.auth.transport.requests import Request as GoogleRequest
 from google.cloud import firestore, secretmanager
 from google.oauth2 import id_token
 from google.oauth2.credentials import Credentials
-from gsheets_plaid.create_sheet import create_new_spreadsheet
+from gsheets_plaid.create_sheet import create_new_spreadsheet, upload_apps_script
 from gsheets_plaid.services import GOOGLE_SCOPES, generate_gsheets_service, generate_plaid_client, generate_apps_script_service
 from gsheets_plaid.sync import get_spreadsheet_url, sync_transactions
 from gsheets_plaid.web_server.session_manager import FirestoreSessionManager, FlaskSessionManager
@@ -199,9 +199,10 @@ def manage_spreadsheets():
     elif request.method == 'POST':
         title = request.form.get(f'spreadsheet_name')
         if title:
-            spreadsheet_id = create_new_spreadsheet(gsheets_service, apps_script_service, title)
+            spreadsheet_id, script_id = create_new_spreadsheet(gsheets_service, apps_script_service, title)
             session_data[f'spreadsheet_id'] = spreadsheet_id
             session_data[f'spreadsheet_url'] = get_spreadsheet_url(gsheets_service, spreadsheet_id)
+            session_data['script_id'] = script_id
             session_manager.set_session(session_data)
         return redirect(url_for('manage_spreadsheets'))
     else:
@@ -262,12 +263,14 @@ def sync():
     try:
         google_credentials = establish_google_credentials(session_data['google_credentials'])
         gsheets_service = generate_gsheets_service(google_credentials)
+        apps_script_service = generate_apps_script_service(google_credentials)
     except (ValueError, KeyError):
         return redirect(url_for('authorize_google_credentials'))
     plaid_client = build_plaid_client(session_data)
     plaid_access_tokens = get_plaid_items(session_data).values()
     spreadsheet_id = session_data.get(f'spreadsheet_id')
     sync_transactions(gsheets_service, plaid_client, plaid_access_tokens, spreadsheet_id, num_days)
+    upload_apps_script(apps_script_service, session_data.get('script_id'))
     session_manager['last_sync'] = datetime.now().strftime(TIMESTAMP_FORMAT)
     return redirect(url_for('index'))
 
