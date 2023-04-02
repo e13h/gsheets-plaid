@@ -173,8 +173,8 @@ def merge_transactions(existing_transactions: pd.DataFrame, new_transactions: pd
 
     # Sort
     result.sort_values(
-        by=['pending', 'datetime', 'name'],
-        ascending=[False, False, True],
+        by=['pending', 'datetime', 'name', 'transaction_id'],
+        ascending=[False, False, True, True],
         inplace=True,
         ignore_index=True)
 
