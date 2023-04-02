@@ -40,6 +40,9 @@ ITEM_COLS = [
     'institution_id',
     'consent_expiration_time',
 ]
+CHECKBOX_COLS = [
+    dict(name="split", index=12),
+]
 
 
 def get_transactions_from_plaid(
@@ -115,6 +118,10 @@ def get_transactions_from_plaid(
     transactions.insert(account_name_idx + 1, 'item_id', item.item_id)
     transactions.insert(account_name_idx + 2, 'institution_id', item.institution_id)
     transactions.insert(account_name_idx + 3, 'institution_name', institution.get('name'))
+
+    # Add checkbox columns
+    for col in CHECKBOX_COLS:
+        transactions.insert(col["index"], col["name"], "")
 
     return transactions
 
@@ -249,11 +256,27 @@ def apply_gsheet_formatting(
             'fields': 'gridProperties.frozenRowCount',
         }
     }
+    insert_checkboxes = {
+        'setDataValidation': {
+            'range': {
+                'startRowIndex': 1,
+                'endRowIndex': len(transactions) + 1,
+                'startColumnIndex': transactions.columns.get_loc('split'),
+                'endColumnIndex': transactions.columns.get_loc('split') + 1,
+            },
+            'rule': {
+                'condition': {
+                    'type': 'BOOLEAN',
+                }
+            }
+        }
+    }
     # Send batch requests
     requests = [
         datetime_format,
         header_format,
         freeze_header,
+        insert_checkboxes,
     ]
     gsheets_service.spreadsheets().batchUpdate(
         spreadsheetId=spreadsheet_id,
