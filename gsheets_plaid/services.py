@@ -11,6 +11,7 @@ GOOGLE_SCOPES = [
     'openid',
     'https://www.googleapis.com/auth/userinfo.profile',
     'https://www.googleapis.com/auth/userinfo.email',
+    'https://www.googleapis.com/auth/script.projects',
 ]
 
 
@@ -41,7 +42,7 @@ def generate_plaid_client(
     return plaid_client
 
 
-def generate_gsheets_service(credentials: Credentials | dict | str) -> googleapiclient.discovery.Resource:
+def build_google_service(service_name: str, service_version: str, credentials: Credentials | dict | str):
     if isinstance(credentials, dict):
         credentials = Credentials.from_authorized_user_info(credentials, GOOGLE_SCOPES)
     elif isinstance(credentials, str) and os.path.isfile(credentials):
@@ -54,5 +55,13 @@ def generate_gsheets_service(credentials: Credentials | dict | str) -> googleapi
     elif not isinstance(credentials, Credentials):
         msg = "'credentials' must be a Credentials object, a dict, a JSON string, or a string filepath."
         raise TypeError(msg)
-    service = googleapiclient.discovery.build('sheets', 'v4', credentials=credentials)
+    service = googleapiclient.discovery.build(service_name, service_version, credentials=credentials)
     return service
+
+
+def generate_gsheets_service(credentials: Credentials | dict | str) -> googleapiclient.discovery.Resource:
+    return build_google_service('sheets', 'v4', credentials=credentials)
+
+
+def generate_apps_script_service(credentials: Credentials | dict | str) -> googleapiclient.discovery.Resource:
+    return build_google_service('script', 'v1', credentials=credentials)

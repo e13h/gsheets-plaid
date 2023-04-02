@@ -15,7 +15,7 @@ from google.cloud import firestore, secretmanager
 from google.oauth2 import id_token
 from google.oauth2.credentials import Credentials
 from gsheets_plaid.create_sheet import create_new_spreadsheet
-from gsheets_plaid.services import GOOGLE_SCOPES, generate_gsheets_service, generate_plaid_client
+from gsheets_plaid.services import GOOGLE_SCOPES, generate_gsheets_service, generate_plaid_client, generate_apps_script_service
 from gsheets_plaid.sync import get_spreadsheet_url, sync_transactions
 from gsheets_plaid.web_server.session_manager import FirestoreSessionManager, FlaskSessionManager
 from plaid.api import plaid_api
@@ -188,8 +188,9 @@ def google_oauth_callback():
 def manage_spreadsheets():
     session_data = session_manager.get_session()
     try:
-        google_credentials = session_data['google_credentials']
-        gsheets_service = build_gsheets_service(google_credentials)
+        google_credentials = establish_google_credentials(session_data['google_credentials'])
+        gsheets_service = generate_gsheets_service(google_credentials)
+        apps_script_service = generate_apps_script_service(google_credentials)
     except (ValueError, KeyError):
         return redirect(url_for('authorize_google_credentials'))
     if request.method == 'GET':
@@ -198,7 +199,7 @@ def manage_spreadsheets():
     elif request.method == 'POST':
         title = request.form.get(f'spreadsheet_name')
         if title:
-            spreadsheet_id = create_new_spreadsheet(gsheets_service, title)
+            spreadsheet_id = create_new_spreadsheet(gsheets_service, apps_script_service, title)
             session_data[f'spreadsheet_id'] = spreadsheet_id
             session_data[f'spreadsheet_url'] = get_spreadsheet_url(gsheets_service, spreadsheet_id)
             session_manager.set_session(session_data)
@@ -259,8 +260,8 @@ def sync():
         '''
     num_days = request.args.get('days', default=30, type=int)
     try:
-        google_credentials = session_data['google_credentials']
-        gsheets_service = build_gsheets_service(google_credentials)
+        google_credentials = establish_google_credentials(session_data['google_credentials'])
+        gsheets_service = generate_gsheets_service(google_credentials)
     except (ValueError, KeyError):
         return redirect(url_for('authorize_google_credentials'))
     plaid_client = build_plaid_client(session_data)
@@ -385,7 +386,7 @@ def lookup_spreadsheet_name(
         forget_spreadsheet()
         return ''
 
-def build_gsheets_service(google_credentials: dict) -> googleapiclient.discovery.Resource:
+def establish_google_credentials(google_credentials: dict) -> Credentials:
     credentials = Credentials.from_authorized_user_info(google_credentials, GOOGLE_SCOPES)
     if credentials.expired and credentials.refresh_token:
         try:
@@ -396,8 +397,7 @@ def build_gsheets_service(google_credentials: dict) -> googleapiclient.discovery
     if not credentials.valid:
         del session_manager['google_credentials']
         raise ValueError('Invalid Google credentials')
-    gsheets_service = generate_gsheets_service(credentials)
-    return gsheets_service
+    return credentials
 
 def request_link_token(session_data: dict) -> str:
     plaid_client = build_plaid_client(session_data)

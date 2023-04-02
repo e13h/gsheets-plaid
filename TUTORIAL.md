@@ -21,6 +21,7 @@ Prerequisites:
 ## Enable APIs
 Enable the following APIs:
   * Google Sheets API
+  * Apps Script API
   * Cloud Run API
 
 1. In the Google Cloud console, go to the [APIs & services Library](https://console.cloud.google.com/apis/library) for your project.
@@ -42,12 +43,19 @@ Enable the following APIs:
 1. Click **Add or Remove Scopes**.
 1. Add the following scopes (tip: use the filter search bar to narrow the results):
     * `https://www.googleapis.com/auth/drive.file`
+    * `openid`
+    * `https://www.googleapis.com/auth/userinfo.profile`
+    * `https://www.googleapis.com/auth/userinfo.email`
+    * `https://www.googleapis.com/auth/script.projects`
 1. Click **Save and Continue**.
 1. Click **Add Users**.
 1. Add yourself as a test user (enter an @gmail.com address that you own).
 1. Click **Add**.
 1. Click **Save and Continue**.
 1. Review the information, then click **Back to Dashboard**.
+
+## Enable Apps Script API
+Enable the Apps Script API on your user [account settings page](https://script.google.com/home/usersettings). This will give the tool the ability to create scripts that dynamically update the spreadsheet.
 
 ## Prepare environment variables
 In order to spin up the local web server, we need to pass in several environment variables. To make things easier, we'll record the data in a script for easy reference.
