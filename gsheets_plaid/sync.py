@@ -168,8 +168,10 @@ def merge_transactions(existing_transactions: pd.DataFrame, new_transactions: pd
     existing_transaction_ids = existing_transactions.transaction_id
     new_transactions = new_transactions[~new_transaction_ids.isin(existing_transaction_ids)]
 
-    # Concatenate new_transactions to existing_transactions
-    result = pd.concat((existing_transactions, new_transactions), axis=0)
+    # Concatenate existing_transactions to new_transactions
+    # This preserves the column ordering defined in `get_transactions_from_plaid`
+    # but keeps any additional columns that the user may have inserted as well.
+    result = pd.concat((new_transactions, existing_transactions), axis=0)
 
     # Sort
     result.sort_values(
