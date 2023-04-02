@@ -132,7 +132,9 @@ def get_transactions_from_gsheet(
     rows = result.get('values', [])
     if not len(rows):
         return []
-    transactions = pd.DataFrame(rows[1:], columns=rows[0])
+    transactions = pd.DataFrame(rows)
+    transactions.columns = transactions.iloc[0]
+    transactions = transactions[1:]
 
     # Turn pending into a boolean column
     def convert_pending(cell: str) -> bool:
