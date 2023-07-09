@@ -279,6 +279,57 @@ def apply_gsheet_formatting(
     ).execute()
 
 
+def apply_conditional_formatting(
+        gsheets_service: googleapiclient.discovery.Resource,
+        spreadsheet_id: str,
+        transactions: pd.DataFrame) -> None:
+    def get_prefix(range: str) -> str:
+        return f'INDEX(SPLIT({range}, "-"), 0, 1)'
+    has_sub_transactions = f'COUNTIF({get_prefix("A$2:A$10")}, "="&{get_prefix("A2")}) > 1'
+    main_transaction_amount = f'XLOOKUP({get_prefix("A2")}, A$2:A$10, N$2:N$10)'
+    shared_prefix_total = f'SUMIFS(N$2:N$10, {get_prefix("A$2:A$10")}, "="&{get_prefix("A2")})'
+    error_criteria = f'2 * {main_transaction_amount} <> {shared_prefix_total}'
+    amount_formula = f'=IF({has_sub_transactions}, {error_criteria})'
+    format_amount = {
+        'addConditionalFormatRule': {
+            'index': 0,
+            'rule': {
+                'ranges': [
+                    {
+                        'startColumnIndex': transactions.columns.get_loc('amount'),
+                        'endColumnIndex': transactions.columns.get_loc('amount') + 1,
+                        'startRowIndex': 1,
+                        'endRowIndex': len(transactions) + 1,
+                    }
+                ],
+                'booleanRule': {
+                    'condition': {
+                        'type': 'CUSTOM_FORMULA',
+                        'values': [
+                            {
+                                'userEnteredValue': amount_formula
+                            }
+                        ]
+                    },
+                    'format': {
+                        'backgroundColor': {
+                            'red': 1.0
+                        }
+                    }
+                }
+            }
+        }
+    }
+    requests = [
+        format_amount,
+    ]
+    gsheets_service.spreadsheets().batchUpdate(
+        spreadsheetId=spreadsheet_id,
+        body={'requests': requests},
+    ).execute()
+
+
+
 def get_spreadsheet_url(
         gsheets_service: googleapiclient.discovery.Resource,
         spreadsheet_id: str) -> str:
@@ -306,3 +357,4 @@ def sync_transactions(
             continue
     fill_gsheet(gsheets_service, spreadsheet_id, transactions)
     apply_gsheet_formatting(gsheets_service, spreadsheet_id, transactions)
+    apply_conditional_formatting(gsheets_service, spreadsheet_id, transactions)
