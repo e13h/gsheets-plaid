@@ -279,17 +279,34 @@ def apply_gsheet_formatting(
     ).execute()
 
 
+def check_if_conditional_formatting_exists(
+        gsheets_service: googleapiclient.discovery.Resource,
+        spreadsheet_id: str,
+        formula: str,
+        sheet_num: int) -> bool:
+    response = gsheets_service.spreadsheets().get(spreadsheetId=spreadsheet_id).execute()
+    try:
+        for value in response['sheets'][sheet_num]["conditionalFormats"]:
+            if value["booleanRule"]["condition"]["values"][0]["userEnteredValue"] == formula:
+                return True
+    except KeyError:
+        pass
+    return False
+
+
 def apply_conditional_formatting(
         gsheets_service: googleapiclient.discovery.Resource,
         spreadsheet_id: str,
         transactions: pd.DataFrame) -> None:
     def get_prefix(range: str) -> str:
         return f'INDEX(SPLIT({range}, "-"), 0, 1)'
-    has_sub_transactions = f'COUNTIF({get_prefix("A$2:A$10")}, "="&{get_prefix("A2")}) > 1'
-    main_transaction_amount = f'XLOOKUP({get_prefix("A2")}, A$2:A$10, N$2:N$10)'
-    shared_prefix_total = f'SUMIFS(N$2:N$10, {get_prefix("A$2:A$10")}, "="&{get_prefix("A2")})'
+    has_sub_transactions = f'COUNTIF({get_prefix("A$2:A")}, "="&{get_prefix("A2")}) > 1'
+    main_transaction_amount = f'XLOOKUP({get_prefix("A2")}, A$2:A, N$2:N)'
+    shared_prefix_total = f'SUMIFS(N$2:N, {get_prefix("A$2:A")}, "="&{get_prefix("A2")})'
     error_criteria = f'2 * {main_transaction_amount} <> {shared_prefix_total}'
     amount_formula = f'=IF({has_sub_transactions}, {error_criteria})'
+    if check_if_conditional_formatting_exists(gsheets_service, spreadsheet_id, amount_formula, 0):
+        return
     format_amount = {
         'addConditionalFormatRule': {
             'index': 0,
