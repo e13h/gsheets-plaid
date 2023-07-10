@@ -6,10 +6,10 @@ from datetime import datetime, timedelta
 
 import google_auth_oauthlib.flow
 import googleapiclient.errors
+import requests
 from dotenv import load_dotenv
 from flask import Flask, make_response, redirect, render_template, request, session, url_for
 from google.auth.exceptions import RefreshError
-from google.auth.transport import requests
 from google.auth.transport.requests import Request as GoogleRequest
 from google.cloud import firestore, secretmanager
 from google.oauth2 import id_token
@@ -88,7 +88,7 @@ def sign_in_with_google_callback():
     if not token:
         raise KeyError('No token found!')
     try:
-        id_info = id_token.verify_oauth2_token(token, requests.Request(), os.environ.get('GOOGLE_CLOUD_CLIENT_ID'))
+        id_info = id_token.verify_oauth2_token(token, GoogleRequest(), os.environ.get('GOOGLE_CLOUD_CLIENT_ID'))
         session_manager.register_user_id(id_info['sub'])
         session_data = session_manager.get_session()
         session_data['user_id'] = id_info['sub']
@@ -192,7 +192,7 @@ def manage_spreadsheets():
         gsheets_service = generate_gsheets_service(google_credentials)
         apps_script_service = generate_apps_script_service(google_credentials)
     except (ValueError, KeyError):
-        return redirect(url_for('authorize_google_credentials'))
+        return redirect(url_for('revoke_google_credentials'))
     if request.method == 'GET':
         return render_template('google_spreadsheet_form.html',
             spreadsheet_name=lookup_spreadsheet_name(gsheets_service, session_data))
@@ -493,21 +493,21 @@ def get_plaid_item_info(access_tokens: list, session_data: dict) -> tuple:
     return results
 
 @app.route('/revoke-google-credentials')
-def revoke():
-    session_data = session_manager.get_session_data()
+def revoke_google_credentials():
+    session_data = session_manager.get_session()
     raw_credentials = session_data.get('google_credentials')
-    if not raw_credentials:
+    if not raw_credentials or "token" not in raw_credentials:
         return ('You need to <a href="/authorize-google-credentials">authorize</a> before ' +
                 'testing the code to revoke credentials.')
-    credentials = Credentials.from_authorized_user_info(raw_credentials, GOOGLE_SCOPES)
 
     revoke = requests.post('https://oauth2.googleapis.com/revoke',
-        params={'token': credentials.token},
-        headers = {'content-type': 'application/x-www-form-urlencoded'})
+        params={'token': raw_credentials.get("token")},
+        headers = {'content-type': 'application/x-www-form-urlencoded'},
+        timeout=60)
 
     status_code = getattr(revoke, 'status_code')
     if status_code == 200:
-        return 'Credentials successfully revoked.'
+        return redirect(url_for('authorize_google_credentials'))
     else:
         return 'An error occurred.'
 
