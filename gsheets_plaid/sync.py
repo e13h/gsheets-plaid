@@ -298,8 +298,8 @@ def apply_conditional_formatting(
         gsheets_service: googleapiclient.discovery.Resource,
         spreadsheet_id: str,
         transactions: pd.DataFrame) -> None:
-    def get_prefix(range: str) -> str:
-        return f'INDEX(SPLIT({range}, "-"), 0, 1)'
+    def get_prefix(rng: str) -> str:
+        return f'INDEX(SPLIT({rng}, "-"), 0, 1)'
     has_sub_transactions = f'COUNTIF({get_prefix("A$2:A")}, "="&{get_prefix("A2")}) > 1'
     main_transaction_amount = f'XLOOKUP({get_prefix("A2")}, A$2:A, N$2:N)'
     shared_prefix_total = f'SUMIFS(N$2:N, {get_prefix("A$2:A")}, "="&{get_prefix("A2")})'
