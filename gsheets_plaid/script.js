@@ -24,8 +24,6 @@ function splitTransaction(sheet, row) {
         sheet.insertRowAfter(insert_loc);
         fillChildTransactionData(sheet, row, insert_loc + 1, transaction_id, num_child_rows + 1);
     }
-
-    // TODO: add conditional formatting to amount cells based on total amount.
 }
 
 function fillChildTransactionData(sheet, source_row, dest_row, transaction_id, suffix) {
