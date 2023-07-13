@@ -9,12 +9,13 @@ import googleapiclient.errors
 import requests
 from dotenv import load_dotenv
 from flask import Flask, make_response, redirect, render_template, request, session, url_for
+from googleapiclient.errors import HttpError
 from google.auth.exceptions import RefreshError
 from google.auth.transport.requests import Request as GoogleRequest
 from google.cloud import firestore, secretmanager
 from google.oauth2 import id_token
 from google.oauth2.credentials import Credentials
-from gsheets_plaid.create_sheet import create_new_spreadsheet, upload_apps_script
+from gsheets_plaid.create_sheet import create_new_spreadsheet, upload_apps_script, create_new_apps_script
 from gsheets_plaid.services import GOOGLE_SCOPES, generate_gsheets_service, generate_plaid_client, generate_apps_script_service
 from gsheets_plaid.sync import get_spreadsheet_url, sync_transactions
 from gsheets_plaid.web_server.session_manager import FirestoreSessionManager, FlaskSessionManager
@@ -273,7 +274,17 @@ def sync():
     plaid_access_tokens = get_plaid_items(session_data).values()
     spreadsheet_id = session_data.get(f'spreadsheet_id')
     sync_transactions(gsheets_service, plaid_client, plaid_access_tokens, spreadsheet_id, num_days)
-    upload_apps_script(apps_script_service, session_data.get('script_id'))
+    script_id = session_data.get("script_id", None)
+    if script_id is None:
+        title = lookup_spreadsheet_name(gsheets_service, session_data)
+        try:
+            # TODO: Allow user to continue using service even if they don't allow Apps Script scope
+            script_id = create_new_apps_script(apps_script_service, title+' Script', spreadsheet_id)
+        except HttpError as e:
+            if e.error_details[0].get("reason") == "ACCESS_TOKEN_SCOPE_INSUFFICIENT":
+                return redirect(url_for("authorize_google_credentials"))
+        session_manager['script_id'] = script_id
+    upload_apps_script(apps_script_service, script_id)
     session_manager['last_sync'] = datetime.now().strftime(TIMESTAMP_FORMAT)
     return redirect(url_for('index'))
 
