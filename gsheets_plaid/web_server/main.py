@@ -173,7 +173,10 @@ def google_oauth_callback():
     flow.redirect_uri = url_for('google_oauth_callback', _external=True)
 
     # Use the authorization server's response to fetch the OAuth 2.0 tokens.
-    flow.fetch_token(authorization_response=request.url)
+    try:
+        flow.fetch_token(authorization_response=request.url)
+    except Warning:
+        return redirect(url_for("revoke_google_credentials"))
 
     # Store credentials in the session.
     # ACTION ITEM: In a production app, you likely want to save these
