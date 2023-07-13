@@ -18,6 +18,7 @@ from gsheets_plaid.create_sheet import create_new_spreadsheet, upload_apps_scrip
 from gsheets_plaid.services import GOOGLE_SCOPES, generate_gsheets_service, generate_plaid_client, generate_apps_script_service
 from gsheets_plaid.sync import get_spreadsheet_url, sync_transactions
 from gsheets_plaid.web_server.session_manager import FirestoreSessionManager, FlaskSessionManager
+from oauthlib.oauth2.rfc6749.errors import AccessDeniedError
 from plaid.api import plaid_api
 from plaid.exceptions import ApiException as PlaidApiException
 from plaid.model.country_code import CountryCode
@@ -177,11 +178,10 @@ def google_oauth_callback():
         flow.fetch_token(authorization_response=request.url)
     except Warning:
         return redirect(url_for("revoke_google_credentials"))
-
-    # Store credentials in the session.
-    # ACTION ITEM: In a production app, you likely want to save these
-    #              credentials in a persistent database instead.
-    session_manager['google_credentials'] = json.loads(flow.credentials.to_json())
+    except AccessDeniedError:
+        pass
+    else:
+        session_manager['google_credentials'] = json.loads(flow.credentials.to_json())
 
     resp = redirect(url_for('index'))
     resp.delete_cookie('google_oauth_state', httponly=True)
